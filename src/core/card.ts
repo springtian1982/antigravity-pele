@@ -142,6 +142,21 @@ export function buildCardHtml(options: BuildCardOptions): string {
       border-radius: 10px;
       box-shadow: 0 1px 3px rgba(16, 15, 15, 0.08);
     }
+    .pele-card:fullscreen {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      margin: 0;
+      border-radius: 0;
+      border: none;
+    }
+    .pele-card:fullscreen .pele-workspace {
+      flex: 1;
+      min-height: 0;
+      border-radius: 0;
+    }
     .pele-header {
       position: sticky;
       top: 0;
@@ -340,6 +355,7 @@ export function buildCardHtml(options: BuildCardOptions): string {
           <span role="separator" aria-orientation="vertical"></span>
           <div role="group" aria-label="Height mode">
             <button type="button" id="pele-height-toggle" class="pele-btn" aria-pressed="${heightMode === 'auto' ? 'true' : 'false'}" title="Toggle adaptive height">自适应</button>
+            <button type="button" id="pele-fullscreen-toggle" class="pele-btn" aria-pressed="false" title="Toggle fullscreen view">全屏</button>
           </div>
           <span role="separator" aria-orientation="vertical"></span>
           <div role="group" aria-label="Export and copy">

@@ -29,8 +29,10 @@ interface CardMeta {
   const metaEl = document.getElementById('pele-card-meta');
   const codeEl = document.getElementById('pele-source-code');
   const heightToggleBtn = document.getElementById('pele-height-toggle') as HTMLButtonElement | null;
+  const fullscreenBtn = document.getElementById('pele-fullscreen-toggle') as HTMLButtonElement | null;
 
   if (!card || !stage || !panLayer) return;
+  const headerEl = card.querySelector('.pele-header') as HTMLElement | null;
 
   let meta: CardMeta = {
     title: 'diagram',
@@ -76,6 +78,13 @@ interface CardMeta {
 
   const syncWorkspaceHeight = () => {
     if (!workspace) return;
+    if (document.fullscreenElement === card) {
+      const headerH = headerEl?.offsetHeight || 42;
+      const fsHeight = Math.max(200, window.innerHeight - headerH);
+      workspace.style.height = `${fsHeight}px`;
+      lastAppliedHeight = fsHeight;
+      return;
+    }
     const totalW = Math.max(160, workspace.clientWidth || card.clientWidth || 620);
     const stageW =
       currentViewMode === 'split'
@@ -248,6 +257,27 @@ interface CardMeta {
   const announce = (msg: string) => {
     if (statusEl) statusEl.textContent = msg;
   };
+
+  fullscreenBtn?.addEventListener('click', () => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
+      return;
+    }
+    if (typeof card.requestFullscreen === 'function') {
+      void card.requestFullscreen().catch(() => {
+        announce('当前内嵌框限制系统全屏，请点击卡片下方「全高卡片视图」或打开 Pele Studio');
+      });
+    } else {
+      announce('请点击卡片下方「全高卡片视图」或打开 Pele Studio');
+    }
+  });
+
+  document.addEventListener('fullscreenchange', () => {
+    const isFs = document.fullscreenElement === card;
+    fullscreenBtn?.setAttribute('aria-pressed', isFs ? 'true' : 'false');
+    syncWorkspaceHeight();
+    if (currentViewMode !== 'code') fitToStage();
+  });
 
   document.getElementById('pele-export-svg')?.addEventListener('click', () => {
     if (!svg) return;

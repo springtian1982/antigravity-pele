@@ -114,6 +114,8 @@ git pull
 node scripts/install.mjs
 ```
 
+> **升级提示**：新版安装脚本支持原位原子更新，MCP 路由会在检测到 `mcp-worker.cjs` 更新后自动热重载，**新建或已有会话均可立即生效**。若你是从早于热重载机制的初版升级，请前往 **Customizations -> Plugins -> Antigravity Pele** 关闭再重新开启一次（或在 **... > MCP Servers** 点击刷新），以拉起支持热重载的 MCP 进程。
+
 ### 彻底卸载
 
 ```bash

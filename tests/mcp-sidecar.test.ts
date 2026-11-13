@@ -63,13 +63,60 @@ test('MCP stdio server handles initialize, tools/list, and all 4 Pele tools', as
     });
     const cardPayload = JSON.parse(
       ((cardRes.result as { content: Array<{ text: string }> }).content[0]).text
-    ) as { ok: boolean; outputPath: string; embedTag: string; diagramType: string };
+    ) as {
+      ok: boolean;
+      outputPath: string;
+      embedTag: string;
+      diagramType: string;
+      isTallDiagram: boolean;
+      fullHeightLink: string;
+    };
     assert.equal(cardPayload.ok, true);
     assert.equal(cardPayload.diagramType, 'swimlane');
     assert.ok(cardPayload.embedTag.startsWith('<agent-embed src="file:///'));
+    assert.ok(cardPayload.fullHeightLink.includes('file:///'));
     assert.ok(fs.existsSync(cardPayload.outputPath));
 
-    const svgRes = await rpc(4, 'tools/call', {
+    const tallCardRes = await rpc(4, 'tools/call', {
+      name: 'pele_render_card',
+      arguments: {
+        title: 'Tall Flowchart',
+        code: [
+          'flowchart TD',
+          '  N1 --> N2',
+          '  N2 --> N3',
+          '  N3 --> N4',
+          '  N4 --> N5',
+          '  N5 --> N6',
+          '  N6 --> N7',
+          '  N7 --> N8',
+          '  N8 --> N9',
+          '  N9 --> N10',
+        ].join('\n'),
+      },
+      _meta: { 'antigravity.google/conversation_id': convId },
+    });
+    const tallPayload = JSON.parse(
+      ((tallCardRes.result as { content: Array<{ text: string }> }).content[0]).text
+    ) as {
+      ok: boolean;
+      outputPath: string;
+      isTallDiagram: boolean;
+      fullHeightLink: string;
+    };
+    assert.equal(tallPayload.ok, true);
+    assert.equal(tallPayload.isTallDiagram, true);
+    assert.ok(tallPayload.fullHeightLink.startsWith('[全高卡片视图](file:///'));
+    const tallHtml = fs.readFileSync(tallPayload.outputPath, 'utf8');
+    assert.ok(tallHtml.includes('id="pele-height-toggle"'));
+    assert.ok(tallHtml.includes('id="pele-fullscreen-toggle"'));
+
+    // Trigger worker mtime update to verify hot-reload path works without restarting process
+    const workerPath = path.join(repoRoot, 'dist', 'mcp-worker.cjs');
+    const now = new Date();
+    fs.utimesSync(workerPath, now, new Date(now.getTime() + 1000));
+
+    const svgRes = await rpc(5, 'tools/call', {
       name: 'pele_render_artifact_svg',
       arguments: {
         title: 'Artifact Mindmap',

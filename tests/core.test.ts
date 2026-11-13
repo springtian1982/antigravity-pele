@@ -146,6 +146,7 @@ test('builds accessible sticky-header card HTML with adaptive height by default,
   assert.ok(autoHtml.includes('command="--copy" commandfor="pele-source-code"'));
   assert.ok(autoHtml.includes('<span id="pele-status" class="tip" role="status"></span>'));
   assert.ok(autoHtml.includes('id="pele-height-toggle"'));
+  assert.ok(autoHtml.includes('id="pele-fullscreen-toggle"'));
   assert.ok(autoHtml.includes('aria-pressed="true" title="Toggle adaptive height"'));
   assert.ok(!/100vh/.test(autoHtml));
   assert.ok(!/font-size:\s*(?:[0-9]|10|11)px/.test(autoHtml));
@@ -183,13 +184,15 @@ test('builds accessible sticky-header card HTML with adaptive height by default,
 test('prebuilt distribution bundles preserve SPDX MIT and upstream copyright headers', () => {
   const repoRoot = path.resolve(process.cwd());
 
-  const cardRuntime = fs.readFileSync(path.join(repoRoot, 'dist', 'card-runtime.js'), 'utf8');
-  assert.ok(cardRuntime.includes('SPDX-License-Identifier: MIT'));
-  assert.ok(cardRuntime.includes('springtian@gmail.com'));
+  for (const rel of [['dist', 'card-runtime.js'], ['dist', 'mcp.cjs']]) {
+    const ownBundle = fs.readFileSync(path.join(repoRoot, ...rel), 'utf8');
+    assert.ok(ownBundle.includes('SPDX-License-Identifier: MIT'), `${rel.join('/')} missing SPDX header`);
+    assert.ok(ownBundle.includes('springtian@gmail.com'), `${rel.join('/')} missing author email`);
+  }
 
   const peleBundles = [
     path.join(repoRoot, 'dist', 'cli.cjs'),
-    path.join(repoRoot, 'dist', 'mcp.cjs'),
+    path.join(repoRoot, 'dist', 'mcp-worker.cjs'),
     path.join(repoRoot, 'sidecars', 'pele_studio', 'dist', 'server.mjs'),
     path.join(repoRoot, 'sidecars', 'pele_studio', 'dist', 'ui.js'),
   ];

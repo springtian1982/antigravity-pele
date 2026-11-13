@@ -26,6 +26,24 @@ const COPY_DIRS = [
   'bin',
 ];
 
+function copyFileAtomic(src, dst, mode) {
+  fs.mkdirSync(path.dirname(dst), { recursive: true });
+  const tmp = `${dst}.pele-tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    fs.copyFileSync(src, tmp);
+    if (mode !== undefined) {
+      fs.chmodSync(tmp, mode);
+    }
+    fs.renameSync(tmp, dst);
+  } finally {
+    try {
+      if (fs.existsSync(tmp)) fs.rmSync(tmp, { force: true });
+    } catch {
+      // Ignore temp cleanup failure
+    }
+  }
+}
+
 function copyRecursive(src, dst) {
   const stat = fs.statSync(src);
   if (stat.isDirectory()) {
@@ -35,8 +53,7 @@ function copyRecursive(src, dst) {
     }
     return;
   }
-  fs.mkdirSync(path.dirname(dst), { recursive: true });
-  fs.copyFileSync(src, dst);
+  copyFileAtomic(src, dst, stat.mode & 0o777);
 }
 
 function uninstall() {
@@ -69,13 +86,13 @@ function install() {
     throw new Error('Missing dist/cli.cjs — run "npm run build" first.');
   }
 
-  fs.rmSync(pluginDest, { recursive: true, force: true });
+  // Update in place without deleting pluginDest so running MCP/sidecar processes keep a valid cwd inode.
   fs.mkdirSync(pluginDest, { recursive: true });
 
   for (const file of COPY_FILES) {
     const src = path.join(repoRoot, file);
     if (fs.existsSync(src)) {
-      fs.copyFileSync(src, path.join(pluginDest, file));
+      copyFileAtomic(src, path.join(pluginDest, file));
     }
   }
 

@@ -133,9 +133,10 @@ sequenceDiagram
    - 为避免出现滚动条时引起 `<=20px` 的宽度震荡循环，`ResizeObserver` 过滤了单次窄幅抖动。
    - 普通鼠标滚轮保留给外层页面滚动，仅 `Ctrl` / `Cmd + 滚轮` 触发画布缩放。
 
-### 3.4 MCP Stdio 服务器 (`src/mcp/index.ts`)
+### 3.4 热重载 MCP Stdio 服务器 (`src/mcp/index.ts` & `src/mcp/worker.ts`)
 
-- **零外部 MCP SDK 依赖**：直接使用 `node:readline` 按行处理 JSON-RPC 2.0 请求（支持 `initialize`、`ping`、`tools/list`、`tools/call`），使整个 `dist/mcp.cjs` 保持单文件零运行时依赖。
+- **零外部 MCP SDK 依赖 + 路由/Worker 分离**：`dist/mcp.cjs` 仅保留轻量的 JSON-RPC 2.0 stdio 分发外壳（`initialize`、`ping`、`tools/list`、`tools/call`），核心工具与 `pele` 引擎位于 `dist/mcp-worker.cjs`。
+- **自动热重载与失效兜底**：`mcp.cjs` 每次调用前对比 `mcp-worker.cjs` 的 `mtimeMs`，文件变更即清理 `require.cache` 原地重载并发送 `notifications/tools/list_changed`；同时支持在当前目录失效时自动回退定位 `~/.gemini/config/plugins/antigravity-pele/dist/mcp-worker.cjs`，配合 `scripts/install.mjs` 的原地原子替换避免升级后常驻进程长期停留在旧版本。
 - **会话 ID 提取**：优先从 `params._meta["antigravity.google/conversation_id"]` 读取当前会话 ID，其次检查参数或环境变量 `ANTIGRAVITY_CONVERSATION_ID`，从而准确把生成的文件写入 `~/.gemini/antigravity/brain/<conv-id>/`。
 
 ### 3.5 Sidecar 双模后端与安全机制 (`src/sidecar/server.ts` & `src/core/markdown.ts`)
@@ -160,6 +161,7 @@ Pele Studio 后端根据运行环境在两种模式间自动切换：
 | :--- | :--- | :--- | :--- |
 | `src/card/runtime.ts` | `dist/card-runtime.js` | Browser IIFE（压缩） | 内联注入到每个生成的卡片 HTML `<script>` 中 |
 | `src/cli/index.ts` | `dist/cli.cjs` | Node 20 CJS | `agy-pele` CLI 主程序，含 `#!/usr/bin/env node` |
-| `src/mcp/index.ts` | `dist/mcp.cjs` | Node 20 CJS | Antigravity MCP stdio 服务端 |
+| `src/mcp/index.ts` | `dist/mcp.cjs` | Node 20 CJS | 轻量热重载 MCP stdio 路由外壳（监听 `mcp-worker.cjs` 变更） |
+| `src/mcp/worker.ts` | `dist/mcp-worker.cjs` | Node 20 CJS | MCP 工具实现体与内联 `pele` 引擎 |
 | `src/sidecar/server.ts` | `sidecars/pele_studio/dist/server.mjs` | Node 20 ESM | Sidecar 后端（`external: ['sidecar_sdk']`） |
 | `src/sidecar/ui-client.ts` | `sidecars/pele_studio/dist/ui.js` | Browser IIFE（压缩） | 内联 `pele` 全量渲染引擎的 Studio 前端脚本 |

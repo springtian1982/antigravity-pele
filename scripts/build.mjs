@@ -61,11 +61,22 @@ async function buildAll() {
   const binShim = path.join(rootDir, 'bin', 'agy-pele');
   if (fs.existsSync(binShim)) fs.chmodSync(binShim, 0o755);
 
-  // 3. MCP server bundle
+  // 3. MCP hot-reloading router + worker bundle
   await esbuild.build({
     entryPoints: [path.join(rootDir, 'src', 'mcp', 'index.ts')],
     bundle: true,
     outfile: path.join(rootDir, 'dist', 'mcp.cjs'),
+    platform: 'node',
+    format: 'cjs',
+    target: 'node20',
+    legalComments: 'inline',
+    banner: { js: OWN_LICENSE_BANNER },
+  });
+
+  await esbuild.build({
+    entryPoints: [path.join(rootDir, 'src', 'mcp', 'worker.ts')],
+    bundle: true,
+    outfile: path.join(rootDir, 'dist', 'mcp-worker.cjs'),
     platform: 'node',
     format: 'cjs',
     target: 'node20',

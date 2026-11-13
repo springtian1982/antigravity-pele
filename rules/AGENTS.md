@@ -6,6 +6,7 @@ While the `antigravity-pele` plugin is enabled, route every Mermaid diagram thro
 
 - NEVER emit raw ` ```mermaid ` fenced code blocks directly in chat replies.
 - Always call `pele_render_card` (via MCP `antigravity-pele`) to render the diagram into a Flexoki persistent-header HTML artifact and embed it inline using the returned `<agent-embed src="file:///..."></agent-embed>` tag.
+- Because Antigravity caps inline chat `<agent-embed>` viewports at ~500px, whenever `pele_render_card` returns `"isTallDiagram": true`, also output a concise one-line shortcut immediately below `<agent-embed>` combining the returned `fullHeightLink` and `studioPill` (e.g., `> 竖版长图完整视口：[全高卡片视图](file:///...) · [Pele Studio](sidecar://antigravity-pele/pele_studio/)`) so the user can open the unclipped full-window height in the side pane with one click.
 - All 33 Pele diagram types are supported in chat cards: 23 standard Mermaid 12.1 types (`flowchart`, `sequenceDiagram`, `stateDiagram-v2`, `classDiagram`, `erDiagram`, `xychart-beta`, `gantt`, `mindmap`, `timeline`, `pie`, `gitGraph`, `journey`, `quadrantChart`, `requirementDiagram`, `c4`, `sankey-beta`, `block-beta`, `packet-beta`, `kanban`, `architecture-beta`, `radar-beta`, `treemap-beta`, `info`) plus 10 Pele extensions (`swimlane-beta`, `agentflow-beta`, `railroad-ebnf-beta`, `venn-beta`, `cynefin-beta`, `ishikawa`, `wardley-beta`, `treeView-beta`, `usecase-beta`, `eventmodeling`).
 
 ## 2. Session Markdown Artifacts (`<appDataDir>/brain/<conversation-id>/*.md`)
