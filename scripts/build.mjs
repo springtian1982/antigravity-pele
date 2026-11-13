@@ -6,6 +6,19 @@ import esbuild from 'esbuild';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 
+const OWN_LICENSE_BANNER =
+  '/*! antigravity-pele | SPDX-License-Identifier: MIT | Copyright (c) 2026 springtian <springtian@gmail.com> */';
+
+const BUNDLE_LICENSE_BANNER = [
+  '/*!',
+  ' * antigravity-pele (https://github.com/springtian1982/antigravity-pele)',
+  ' * SPDX-License-Identifier: MIT',
+  ' * Copyright (c) 2026 springtian <springtian@gmail.com>',
+  ' * Bundles pele v1.13.0 — Copyright (c) 2026 kepano (MIT) & Lucide Icons (ISC).',
+  ' * See LICENSE and THIRD_PARTY_NOTICES.md for full license texts.',
+  ' */',
+].join('\n');
+
 async function buildAll() {
   fs.mkdirSync(path.join(rootDir, 'dist'), { recursive: true });
   fs.mkdirSync(path.join(rootDir, 'sidecars', 'pele_studio', 'dist'), { recursive: true });
@@ -19,6 +32,8 @@ async function buildAll() {
     format: 'iife',
     target: 'es2022',
     minify: true,
+    legalComments: 'inline',
+    banner: { js: OWN_LICENSE_BANNER },
   });
   const cardRuntimeCode = cardRuntimeRes.outputFiles[0].text;
   fs.writeFileSync(path.join(rootDir, 'dist', 'card-runtime.js'), cardRuntimeCode, 'utf8');
@@ -36,7 +51,8 @@ async function buildAll() {
     platform: 'node',
     format: 'cjs',
     target: 'node20',
-    banner: { js: '#!/usr/bin/env node' },
+    legalComments: 'inline',
+    banner: { js: `#!/usr/bin/env node\n${BUNDLE_LICENSE_BANNER}` },
     define: commonDefine,
     logOverride: { 'empty-import-meta': 'silent' },
   });
@@ -53,6 +69,8 @@ async function buildAll() {
     platform: 'node',
     format: 'cjs',
     target: 'node20',
+    legalComments: 'inline',
+    banner: { js: BUNDLE_LICENSE_BANNER },
     define: commonDefine,
   });
 
@@ -65,8 +83,9 @@ async function buildAll() {
     format: 'esm',
     target: 'node20',
     external: ['sidecar_sdk'],
+    legalComments: 'inline',
     banner: {
-      js: 'import { createRequire as __peleCreateRequire } from "node:module"; const require = __peleCreateRequire(import.meta.url);',
+      js: `${BUNDLE_LICENSE_BANNER}\nimport { createRequire as __peleCreateRequire } from "node:module"; const require = __peleCreateRequire(import.meta.url);`,
     },
     define: commonDefine,
   });
@@ -80,6 +99,8 @@ async function buildAll() {
     format: 'iife',
     target: 'es2022',
     minify: true,
+    legalComments: 'inline',
+    banner: { js: BUNDLE_LICENSE_BANNER },
   });
 
   console.log('Built antigravity-pele artifacts successfully.');

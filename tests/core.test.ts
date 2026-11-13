@@ -179,3 +179,29 @@ test('builds accessible sticky-header card HTML with adaptive height by default,
   assert.ok(fixedHeightMatch);
   assert.equal(Number(fixedHeightMatch[1]), 640);
 });
+
+test('prebuilt distribution bundles preserve SPDX MIT and upstream copyright headers', () => {
+  const repoRoot = path.resolve(process.cwd());
+
+  const cardRuntime = fs.readFileSync(path.join(repoRoot, 'dist', 'card-runtime.js'), 'utf8');
+  assert.ok(cardRuntime.includes('SPDX-License-Identifier: MIT'));
+  assert.ok(cardRuntime.includes('springtian@gmail.com'));
+
+  const peleBundles = [
+    path.join(repoRoot, 'dist', 'cli.cjs'),
+    path.join(repoRoot, 'dist', 'mcp.cjs'),
+    path.join(repoRoot, 'sidecars', 'pele_studio', 'dist', 'server.mjs'),
+    path.join(repoRoot, 'sidecars', 'pele_studio', 'dist', 'ui.js'),
+  ];
+
+  for (const filePath of peleBundles) {
+    const content = fs.readFileSync(filePath, 'utf8');
+    if (filePath.endsWith(`${path.sep}cli.cjs`)) {
+      assert.ok(content.startsWith('#!/usr/bin/env node\n'), 'dist/cli.cjs must preserve shebang on line 1');
+    }
+    assert.ok(content.includes('SPDX-License-Identifier: MIT'), `${filePath} missing SPDX header`);
+    assert.ok(content.includes('springtian <springtian@gmail.com>'), `${filePath} missing author notice`);
+    assert.ok(content.includes('kepano'), `${filePath} missing upstream pele copyright notice`);
+    assert.ok(content.includes('Lucide Icons'), `${filePath} missing upstream Lucide notice`);
+  }
+});

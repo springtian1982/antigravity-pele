@@ -33,13 +33,14 @@ npm install
 
 ## 3. 测试体系概览
 
-测试套件位于 `tests/` 目录，使用 Node.js 内置 `node:test` 运行时执行，共 3 个测试文件、9 个核心端到端用例：
+测试套件位于 `tests/` 目录，使用 Node.js 内置 `node:test` 运行时执行，共 3 个测试文件、10 个核心端到端与合规用例：
 
 - **`tests/core.test.ts`**：
   - 验证标准 Mermaid 12.1 与 Pele 专属扩展图表渲染及 Flexoki 主题变量注入。
   - 验证 `CRLF` / `LF` Markdown 围栏块提取、精确行号追踪以及 `HashConflictError` 并发保护回写。
   - 验证 Windows 与 POSIX 路径向 RFC-8089 `file:///` URI 的转换。
   - 验证卡片 HTML 生成（`auto` / `compact` / `fixed` 三种高度模式、无 `100vh`、无小字号可读性回归）。
+  - 验证所有预构建 `dist/` 单文件产物头部包含 SPDX MIT 与上游组件版权声明及 `cli.cjs` shebang 完整保留。
 - **`tests/cli.test.ts`**：
   - 真实子进程运行 `dist/cli.cjs`，覆盖 `render`（stdin 管道到 SVG/HTML）、`check`（语法错误精确行号与 `--strict-mermaid` 退出码）以及 `extract`（生成编号 SVG 与 `manifest.json`）。
 - **`tests/mcp-sidecar.test.ts`**：
@@ -77,7 +78,7 @@ npm install
 # 1. 类型检查
 npm run typecheck
 
-# 2. 完整重建并运行测试（需 9/9 全部通过）
+# 2. 完整重建并运行测试（需 10/10 全部通过）
 npm test
 
 # 3. 检查工作区所有 Markdown/Mermaid 文档（必须 0 error, 0 warning）

@@ -29,6 +29,19 @@
   "bin": {
     "agy-pele": "./dist/cli.cjs"
   },
+  "files": [
+    "plugin.json",
+    "mcp_config.json",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "assets/",
+    "bin/",
+    "dist/",
+    "rules/",
+    "sidecars/",
+    "skills/"
+  ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",

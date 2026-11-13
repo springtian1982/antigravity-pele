@@ -8,7 +8,7 @@
 
 基于 Obsidian 开源零依赖渲染引擎 [**`obsidianmd/pele`**](https://github.com/obsidianmd/pele) 构建的跨平台（**Windows & Linux**）Google Antigravity 第三方 Mermaid 图表插件与命令行工具，集 **MCP 内联工作卡**、**Pele Studio 右侧工作台**、**三端自动化接管规则** 与 **独立 CLI (`agy-pele`)** 于一体。
 
-[核心特性](#项目背景与核心价值) · [快速安装](#快速安装windows--linux-开箱即用) · [四大形态](#基本使用方式四大形态) · [文档中心](docs/README.md) · [致敬 Obsidian Pele](#致敬与鸣谢obsidian-pele) · [开源协议与署名](#开源协议与署名要求)
+[核心特性](#项目背景与核心价值) · [快速安装](#快速安装windows--linux-开箱即用) · [四大形态](#基本使用方式四大形态) · [文档中心](docs/README.md) · [致敬 Obsidian Pele](#致敬与鸣谢obsidian-pele) · [开源协议](#开源协议与署名说明) · [商标声明](#商标与非官方声明)
 
 ---
 
@@ -168,14 +168,23 @@ agy-pele preview README.md --watch
 
 ---
 
-## 开源协议与署名要求
+## 开源协议与署名说明
 
-本项目基于 **[MIT License](LICENSE)** 开源：
+本项目采用标准 **[MIT License](LICENSE)** 开源发布：
 
 ```text
 Copyright (c) 2026 springtian <springtian@gmail.com>
 ```
 
-- **社区自由使用与商用**：欢迎个人、社区与商业机构自由使用、复制、修改、合并、发布、分发与商用本项目。
-- **修改与商用署名要求**：无论直接商用、再分发，或在本项目代码与产物基础上进行修改和二次开发，**均须在副本或衍生作品的显著位置保留原作者版权与署名声明（`Copyright (c) 2026 springtian <springtian@gmail.com>`）及完整的 [LICENSE](LICENSE) 许可声明**。
-- **第三方组件声明**：预构建发行产物内联了 MIT / ISC 许可的上游组件（包括 `obsidianmd/pele`），详情请见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+- **自由使用、修改与商用**：个人、社区与商业机构均可免费使用、复制、修改、合并、发布、分发、再许可或销售本软件的副本。
+- **软件副本与衍生分发的署名要求**：在分发包含本软件全部或实质性部分的副本、安装包或修改后的衍生代码时，须保留原作者版权与署名声明（`Copyright (c) 2026 springtian <springtian@gmail.com>`）及 [LICENSE](LICENSE) 许可全文（具体授权条款与免责边界以英文 [LICENSE](LICENSE) 原文为准）。
+- **渲染输出物归属**：用户使用 `antigravity-pele` / `agy-pele` 生成导出的 `.svg`、`.png` 等图表文件属于用户自己的内容资产，不受本软件许可证限制。
+- **第三方开源组件声明**：预构建运行产物（`dist/` 与 `sidecars/pele_studio/dist/`）均已在文件头嵌入 SPDX 版权注释，并随附完整的第三方许可证文本，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+---
+
+## 商标与非官方声明
+
+`antigravity-pele`（`agy-pele`）是由社区开发者独立发起并维护的第三方开源插件与命令行工具，与 **Google LLC**（Google Antigravity）、**Dynalist Inc.**（Obsidian / Pele）及 **Mermaid Chart** 无任何官方隶属、合作、赞助或背书关系。
+
+文中提及的所有产品名称、商标与品牌标识（包括 Google Antigravity、Obsidian、Pele、Flexoki、Mermaid 等）均归其各自合法权利人所有，在本仓库中仅用于指代兼容生态与致谢上游开源组件。
