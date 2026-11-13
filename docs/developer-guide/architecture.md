@@ -24,18 +24,19 @@ antigravity_pele/
 │   ├── index.html
 │   ├── styles.css
 │   └── dist/{server.mjs,ui.js}
-├── dist/                      # 预构建运行产物（CLI、MCP、Card Runtime）
+├── dist/                      # 预构建运行产物（CLI、MCP 路由/Worker、Card Runtime）
 │   ├── cli.cjs
 │   ├── mcp.cjs
+│   ├── mcp-worker.cjs
 │   └── card-runtime.js
 ├── scripts/
 │   ├── build.mjs              # esbuild 多入口单文件打包流水线
 │   ├── build-tests.mjs        # 测试套件构建脚本（输出至 .test-dist/）
-│   └── install.mjs            # Windows & Linux 全局安装 / 卸载脚本
+│   └── install.mjs            # Windows & Linux 全局原子安装 / 历史卡片升级 / 卸载脚本
 ├── src/
-│   ├── core/                  # 核心渲染、主题、Markdown 块提取、校验、存储、路径安全
+│   ├── core/                  # 渲染、主题、Markdown 块提取、校验、历史卡片原位升级、存储、路径安全
 │   ├── card/runtime.ts        # 嵌入在 HTML 工作卡中的零依赖浏览器端交互运行时
-│   ├── mcp/index.ts           # 纯标准库 JSON-RPC 2.0 MCP stdio 服务器
+│   ├── mcp/                   # 热重载 JSON-RPC 2.0 MCP 路由（index.ts）与工具实现体（worker.ts）
 │   ├── sidecar/               # Sidecar 双模 HTTP 后端（server.ts）与 Studio UI 客户端（ui-client.ts）
 │   └── cli/index.ts           # agy-pele CLI 入口
 ├── docs/                      # 用户与开发者文档库
@@ -56,9 +57,10 @@ flowchart TB
   CoreMd["src/core/markdown.ts<br/>(块解析 / SHA-256 / 原子回写)"]
   CorePlatform["src/core/platform.ts<br/>(跨平台 URI / brain 路径 / 根目录遏制)"]
   CoreStore["src/core/studio-store.ts<br/>(会话图表索引持久化)"]
-  CoreCard["src/core/card.ts + src/card/runtime.ts<br/>(Flexoki 交互卡与自适应高度)"]
+  CoreCard["src/core/card.ts + src/card/runtime.ts<br/>(Flexoki 交互卡与自适应高度/全屏)"]
+  CoreUpgrader["src/core/upgrader.ts<br/>(历史 pele-*.html 原位无损升级)"]
 
-  MCP["src/mcp/index.ts"]
+  MCP["src/mcp/index.ts + worker.ts"]
   Sidecar["src/sidecar/server.ts + ui-client.ts"]
   CLI["src/cli/index.ts"]
 
@@ -66,6 +68,8 @@ flowchart TB
   CoreRenderer --> CoreCard
   CorePalette --> CoreRenderer
   CorePalette --> CoreCard
+  CoreCard --> CoreUpgrader
+  CoreRenderer --> CoreUpgrader
 
   CoreCard --> MCP
   CoreMd --> MCP
@@ -73,11 +77,13 @@ flowchart TB
   CorePlatform --> MCP
 
   CoreCard --> Sidecar
+  CoreUpgrader --> Sidecar
   CoreMd --> Sidecar
   CoreStore --> Sidecar
   CorePlatform --> Sidecar
 
   CoreCard --> CLI
+  CoreUpgrader --> CLI
   CoreMd --> CLI
   CoreRenderer --> CLI
   Sidecar --> CLI
