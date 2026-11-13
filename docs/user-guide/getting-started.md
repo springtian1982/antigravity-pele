@@ -114,7 +114,7 @@ git pull
 node scripts/install.mjs
 ```
 
-> **升级提示**：新版安装脚本支持原位原子更新，MCP 路由会在检测到 `mcp-worker.cjs` 更新后自动热重载，**新建或已有会话均可立即生效**。若你是从早于热重载机制的初版升级，请前往 **Customizations -> Plugins -> Antigravity Pele** 关闭再重新开启一次（或在 **... > MCP Servers** 点击刷新），以拉起支持热重载的 MCP 进程。
+> **升级提示**：新版安装脚本支持原位原子更新，执行 `node scripts/install.mjs` 时还会自动调用 `agy-pele upgrade-cards` 将 `~/.gemini/antigravity/brain/` 下**历史会话中已生成的旧版卡片**原位升级到最新模板（补齐 `自适应` 与 `全屏` 工具栏，如需跳过可传 `--no-upgrade-cards`）；同时 MCP 路由会在检测到 `mcp-worker.cjs` 更新后自动热重载，**新建或已有会话均可立即生效**。若某历史会话标签页正处于打开状态，切换一次会话或重新打开窗口即可刷新 WebView 缓存看到升级后的卡片。
 
 ### 彻底卸载
 

@@ -21,6 +21,7 @@ import {
   toFileUri,
 } from '../core/platform.js';
 import { renderDiagram } from '../core/renderer.js';
+import { parseCardHtml } from '../core/upgrader.js';
 import {
   getConversationStorePath,
   getGlobalFocusPath,
@@ -129,6 +130,7 @@ function walkDiagramFiles(rootPath: string, maxFiles = 200, maxDepth = 5): strin
 }
 
 interface ParsedCardArtifact extends StudioItemRecord {
+  standalonePage?: boolean;
   heightMode?: 'auto' | 'compact' | 'fixed';
   fixedHeight?: number;
   maxHeight?: number;
@@ -137,36 +139,22 @@ interface ParsedCardArtifact extends StudioItemRecord {
 function parseCardArtifact(filePath: string): ParsedCardArtifact | null {
   try {
     const html = fs.readFileSync(filePath, 'utf8');
-    const metaMatch = /<script\s+type="application\/json"\s+id="pele-card-meta">([\s\S]*?)<\/script>/i.exec(html);
-    const codeMatch = /<code\s+id="pele-source-code">([\s\S]*?)<\/code>/i.exec(html);
-    if (!metaMatch || !codeMatch) return null;
-
-    const meta = JSON.parse(metaMatch[1]) as {
-      title?: string;
-      diagramType?: string;
-      sourceHash?: string;
-      heightMode?: 'auto' | 'compact' | 'fixed';
-      fixedHeight?: number;
-      maxHeight?: number;
-    };
-    const decodedCode = codeMatch[1]
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&amp;/g, '&');
+    const parsed = parseCardHtml(html, path.basename(filePath, '.html'));
+    if (!parsed) return null;
 
     return {
       id: `card:${filePath}`,
       kind: 'card-artifact',
-      title: meta.title || path.basename(filePath, '.html'),
+      title: parsed.title,
       filePath,
-      code: decodedCode,
-      diagramType: meta.diagramType,
-      sourceHash: meta.sourceHash || hashCode(decodedCode),
+      code: parsed.code,
+      diagramType: parsed.diagramType,
+      sourceHash: parsed.sourceHash,
       updatedAt: fs.statSync(filePath).mtime.toISOString(),
-      heightMode: meta.heightMode,
-      fixedHeight: meta.fixedHeight,
-      maxHeight: meta.maxHeight,
+      standalonePage: parsed.standalonePage,
+      heightMode: parsed.heightMode,
+      fixedHeight: parsed.fixedHeight,
+      maxHeight: parsed.maxHeight,
     };
   } catch {
     return null;
@@ -417,6 +405,7 @@ function handleSaveRequest(
         code: newCode.replace(/\r\n/g, '\n'),
         title: body.title || existing.title,
         theme,
+        standalonePage: existing.standalonePage,
         height: preservedHeight,
         maxHeight: existing.maxHeight,
         sourceHash: updatedHash,

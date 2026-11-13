@@ -20,6 +20,7 @@ agy-pele --version    # 查看当前版本（例：agy-pele 0.1.0）
 | `render` | 将单个 `.mmd` 文件或标准输入渲染为 `.svg` 或 `.html` 卡片 | 快捷出图、脚本管道生成图表 |
 | `check` | 扫描文件或目录中的 `.md` / `.mmd`，校验语法与 GitHub 兼容性 | 本地检查、Git Pre-commit、CI 流水线 |
 | `extract` | 从 Markdown 文档中批量提取全部 Mermaid 代码块并生成 `manifest.json` | 静态站点构建、论文/报告配图导出 |
+| `upgrade-cards` | 原位无损升级历史已生成的 `pele-*.html` 卡片至最新模板与自适应运行时 | 插件升级后刷新历史对话中的旧图表 |
 | `preview` | 启动本地 HTTP 服务并在默认浏览器打开 Pele Studio | 脱离 IDE 单独调试整库图表 |
 
 ---
@@ -118,7 +119,35 @@ agy-pele extract <file.md> -o <out-dir> [-f svg|html] [--theme <mode>] [--height
 
 ---
 
-## 4. `agy-pele preview`
+## 4. `agy-pele upgrade-cards`
+
+因为每张 `pele-*.html` 卡片都是自包含静态 HTML 文件，单纯重启插件默认只会影响新生成的卡片。借助每张卡片内嵌保存的 `<script id="pele-card-meta">` 与原始源码 `<code id="pele-source-code">`，`upgrade-cards` 可以**在不改变原文件路径（`file:///...`）的前提下**，将历史会话中旧版卡片原位重编译为最新的自适应高度（`height: "auto"`）、`自适应` / `全屏` 工具栏与客户端运行时。
+
+### 语法
+
+```bash
+agy-pele upgrade-cards [paths...] [--dry-run] [--json]
+```
+
+| 参数 | 说明 | 默认值 |
+| :--- | :--- | :--- |
+| `[paths...]` | 指定要扫描升级的 `.html` 文件或目录 | 默认扫描 `~/.gemini/antigravity/brain`（Windows 为 `%USERPROFILE%\.gemini\antigravity\brain`） |
+| `--dry-run` | 仅预览哪些历史卡片会被升级，不修改磁盘文件 | 关闭 |
+| `--json` | 输出结构化 JSON 汇总报告 | 关闭 |
+
+### 示例
+
+```bash
+# 一键原位升级本机所有历史 Antigravity 会话中的 Pele 卡片（node scripts/install.mjs 亦会自动调用）
+agy-pele upgrade-cards
+
+# 预览某个目录中有多少旧版卡片待升级
+agy-pele upgrade-cards ./docs --dry-run
+```
+
+---
+
+## 5. `agy-pele preview`
 
 启动轻量本地 HTTP 服务，在浏览器中打开独立版 **Pele Studio**，支持监控指定文件或整个工作区目录。
 

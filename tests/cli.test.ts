@@ -158,3 +158,95 @@ test('agy-pele extract writes numbered SVG files and manifest.json', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('agy-pele upgrade-cards upgrades legacy 416px card HTML in-place and is idempotent', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pele-cli-upgrade-'));
+  try {
+    const legacyCardPath = path.join(tmpDir, 'pele-legacy-flow.html');
+    const unrelatedHtmlPath = path.join(tmpDir, 'index.html');
+    const legacyHtml = [
+      '<!DOCTYPE html>',
+      '<html lang="en"><body class="pele-body is-inline">',
+      '<div id="pele-card" class="pele-card">',
+      '<div class="pele-workspace" style="height:416px"><svg class="pele"></svg></div>',
+      '<pre class="pele-code-pane"><code id="pele-source-code">flowchart TD',
+      '  A[&quot;Step 1 &amp; Init&quot;] --&gt; B[Step 2]',
+      '  B --&gt; C[Step 3]',
+      '  C --&gt; D[Step 4]',
+      '  D --&gt; E[Step 5]',
+      '  E --&gt; F[Step 6]',
+      '  F --&gt; G[Step 7]',
+      '  G --&gt; H[Step 8]</code></pre>',
+      '</div>',
+      '<script type="application/json" id="pele-card-meta">{"title":"Legacy Tall Flow & Init","diagramType":"flowchart","theme":"flexoki","sourceHash":"legacyhash01"}</script>',
+      '</body></html>',
+    ].join('\n');
+
+    fs.writeFileSync(legacyCardPath, legacyHtml, 'utf8');
+    fs.writeFileSync(unrelatedHtmlPath, '<!DOCTYPE html><html><body>Hello</body></html>', 'utf8');
+
+    // 1. Dry-run reports 1 upgrade without mutating disk
+    const dryOut = execFileSync(
+      process.execPath,
+      [cliPath, 'upgrade-cards', tmpDir, '--dry-run', '--json'],
+      { encoding: 'utf8' }
+    );
+    const dryJson = JSON.parse(dryOut) as {
+      ok: boolean;
+      dryRun: boolean;
+      filesScanned: number;
+      cardsFound: number;
+      cardsUpgraded: number;
+    };
+    assert.equal(dryJson.ok, true);
+    assert.equal(dryJson.dryRun, true);
+    assert.equal(dryJson.filesScanned, 2);
+    assert.equal(dryJson.cardsFound, 1);
+    assert.equal(dryJson.cardsUpgraded, 1);
+    assert.equal(fs.readFileSync(legacyCardPath, 'utf8'), legacyHtml);
+
+    // 2. Real run upgrades legacy card in-place to adaptive height + fullscreen toolbar
+    const realOut = execFileSync(process.execPath, [cliPath, 'upgrade-cards', tmpDir, '--json'], {
+      encoding: 'utf8',
+    });
+    const realJson = JSON.parse(realOut) as {
+      ok: boolean;
+      cardsFound: number;
+      cardsUpgraded: number;
+      cardsUnchanged: number;
+    };
+    assert.equal(realJson.ok, true);
+    assert.equal(realJson.cardsFound, 1);
+    assert.equal(realJson.cardsUpgraded, 1);
+    assert.equal(realJson.cardsUnchanged, 0);
+
+    const upgradedHtml = fs.readFileSync(legacyCardPath, 'utf8');
+    assert.ok(upgradedHtml.includes('"heightMode":"auto"'));
+    assert.ok(upgradedHtml.includes('id="pele-height-toggle"'));
+    assert.ok(upgradedHtml.includes('id="pele-fullscreen-toggle"'));
+    assert.ok(upgradedHtml.includes('Legacy Tall Flow &amp; Init'));
+    assert.ok(upgradedHtml.includes('&quot;Step 1 &amp; Init&quot;'));
+    assert.ok(upgradedHtml.includes('"sourceHash":"legacyhash01"'));
+    const hMatch = /\.pele-workspace\s*\{[^}]*height:\s*(\d+)px;/s.exec(upgradedHtml);
+    assert.ok(hMatch && Number(hMatch[1]) > 420);
+
+    // Unrelated HTML untouched
+    assert.equal(
+      fs.readFileSync(unrelatedHtmlPath, 'utf8'),
+      '<!DOCTYPE html><html><body>Hello</body></html>'
+    );
+
+    // 3. Second run is idempotent (0 upgraded, 1 unchanged)
+    const secondOut = execFileSync(process.execPath, [cliPath, 'upgrade-cards', tmpDir, '--json'], {
+      encoding: 'utf8',
+    });
+    const secondJson = JSON.parse(secondOut) as {
+      cardsUpgraded: number;
+      cardsUnchanged: number;
+    };
+    assert.equal(secondJson.cardsUpgraded, 0);
+    assert.equal(secondJson.cardsUnchanged, 1);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});

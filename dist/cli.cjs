@@ -41,8 +41,8 @@ __export(index_exports, {
   runCli: () => runCli
 });
 module.exports = __toCommonJS(index_exports);
-var import_node_fs6 = __toESM(require("node:fs"), 1);
-var import_node_path6 = __toESM(require("node:path"), 1);
+var import_node_fs7 = __toESM(require("node:fs"), 1);
+var import_node_path7 = __toESM(require("node:path"), 1);
 
 // src/core/palette.ts
 var FLEXOKI_LIGHT = {
@@ -22646,29 +22646,177 @@ function checkDiagramPaths(inputs, options = {}) {
   };
 }
 
+// src/core/upgrader.ts
+var import_node_fs4 = __toESM(require("node:fs"), 1);
+var import_node_path4 = __toESM(require("node:path"), 1);
+var SKIP_DIRS2 = /* @__PURE__ */ new Set([
+  ".git",
+  "node_modules",
+  "dist",
+  ".test-dist",
+  ".system_generated",
+  "browser_sandbox"
+]);
+function parseCardHtml(html, fallbackTitle = "Mermaid Diagram") {
+  if (!html.includes('id="pele-card-meta"') || !html.includes('id="pele-source-code"')) {
+    return null;
+  }
+  const metaMatch = /<script\s+type="application\/json"\s+id="pele-card-meta">([\s\S]*?)<\/script>/i.exec(html);
+  const codeMatch = /<code\s+id="pele-source-code">([\s\S]*?)<\/code>/i.exec(html);
+  if (!metaMatch || !codeMatch) return null;
+  try {
+    const meta = JSON.parse(metaMatch[1]);
+    const decodedCode = codeMatch[1].replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&").replace(/\r\n/g, "\n");
+    const height = meta.heightMode === "fixed" && typeof meta.fixedHeight === "number" ? normalizeCardHeight(meta.fixedHeight) : meta.heightMode === "compact" ? "compact" : "auto";
+    return {
+      title: meta.title?.trim() || fallbackTitle,
+      code: decodedCode,
+      theme: normalizeThemeMode(meta.theme),
+      standalonePage: /<body[^>]*\bis-standalone\b/i.test(html),
+      height,
+      heightMode: meta.heightMode,
+      fixedHeight: meta.fixedHeight,
+      maxHeight: typeof meta.maxHeight === "number" && Number.isFinite(meta.maxHeight) ? meta.maxHeight : void 0,
+      sourceHash: meta.sourceHash || hashCode(decodedCode),
+      diagramType: meta.diagramType
+    };
+  } catch {
+    return null;
+  }
+}
+function collectHtmlFiles(targets, maxDepth = 4) {
+  const seen = /* @__PURE__ */ new Set();
+  const results = [];
+  function visit(entryPath, depth) {
+    let stat;
+    try {
+      stat = import_node_fs4.default.statSync(entryPath);
+    } catch {
+      return;
+    }
+    if (stat.isFile()) {
+      if (import_node_path4.default.extname(entryPath).toLowerCase() === ".html" && stat.size <= 10 * 1024 * 1024) {
+        const resolved = import_node_path4.default.resolve(entryPath);
+        if (!seen.has(resolved)) {
+          seen.add(resolved);
+          results.push(resolved);
+        }
+      }
+      return;
+    }
+    if (!stat.isDirectory() || depth > maxDepth) return;
+    let entries;
+    try {
+      entries = import_node_fs4.default.readdirSync(entryPath, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (SKIP_DIRS2.has(entry.name)) continue;
+      const full = import_node_path4.default.join(entryPath, entry.name);
+      if (entry.isDirectory()) {
+        visit(full, depth + 1);
+      } else if (entry.isFile() && import_node_path4.default.extname(entry.name).toLowerCase() === ".html") {
+        visit(full, depth + 1);
+      }
+    }
+  }
+  for (const rawTarget of targets) {
+    visit(import_node_path4.default.resolve(rawTarget), 0);
+  }
+  return results.sort();
+}
+function upgradeCardArtifacts(targets, options = {}) {
+  const htmlFiles = collectHtmlFiles(targets);
+  const items = [];
+  const errors = [];
+  let cardsFound = 0;
+  let cardsUpgraded = 0;
+  let cardsUnchanged = 0;
+  for (const filePath of htmlFiles) {
+    let currentHtml;
+    try {
+      currentHtml = import_node_fs4.default.readFileSync(filePath, "utf8");
+    } catch (err) {
+      errors.push({
+        filePath,
+        error: err instanceof Error ? err.message : String(err)
+      });
+      continue;
+    }
+    const parsed = parseCardHtml(currentHtml, import_node_path4.default.basename(filePath, ".html"));
+    if (!parsed) continue;
+    cardsFound++;
+    try {
+      const rendered = renderDiagram(parsed.code, { theme: parsed.theme });
+      const nextHtml = buildCardHtml({
+        rendered,
+        code: parsed.code,
+        title: parsed.title,
+        theme: parsed.theme,
+        standalonePage: parsed.standalonePage,
+        height: parsed.height,
+        maxHeight: parsed.maxHeight,
+        sourceHash: parsed.sourceHash,
+        runtimeJsOverride: options.runtimeJsOverride
+      });
+      const changed = nextHtml !== currentHtml;
+      if (changed) {
+        if (!options.dryRun) {
+          writeFileAtomic(filePath, nextHtml);
+        }
+        cardsUpgraded++;
+      } else {
+        cardsUnchanged++;
+      }
+      items.push({
+        filePath,
+        title: parsed.title,
+        diagramType: rendered.type,
+        heightMode: typeof parsed.height === "number" ? "fixed" : parsed.height,
+        changed
+      });
+    } catch (err) {
+      errors.push({
+        filePath,
+        error: err instanceof Error ? err.message : String(err)
+      });
+    }
+  }
+  return {
+    ok: errors.length === 0,
+    filesScanned: htmlFiles.length,
+    cardsFound,
+    cardsUpgraded,
+    cardsUnchanged,
+    errors,
+    items
+  };
+}
+
 // src/sidecar/server.ts
 var import_node_crypto2 = __toESM(require("node:crypto"), 1);
-var import_node_fs5 = __toESM(require("node:fs"), 1);
+var import_node_fs6 = __toESM(require("node:fs"), 1);
 var import_node_http = __toESM(require("node:http"), 1);
-var import_node_path5 = __toESM(require("node:path"), 1);
+var import_node_path6 = __toESM(require("node:path"), 1);
 var import_node_url2 = require("node:url");
 
 // src/core/studio-store.ts
-var import_node_fs4 = __toESM(require("node:fs"), 1);
-var import_node_path4 = __toESM(require("node:path"), 1);
+var import_node_fs5 = __toESM(require("node:fs"), 1);
+var import_node_path5 = __toESM(require("node:path"), 1);
 function getConversationStorePath(convId) {
   if (!isValidConversationId(convId)) return null;
   const brainDir = resolveBrainDir(convId);
-  return import_node_path4.default.join(brainDir, "scratch", "pele_studio", "items.json");
+  return import_node_path5.default.join(brainDir, "scratch", "pele_studio", "items.json");
 }
 function getGlobalFocusPath() {
-  return import_node_path4.default.join(resolveSidecarDataDir(), "focus.json");
+  return import_node_path5.default.join(resolveSidecarDataDir(), "focus.json");
 }
 function readStudioStore(storePath) {
   if (!storePath) return { items: [] };
   try {
-    if (!import_node_fs4.default.existsSync(storePath)) return { items: [] };
-    const parsed = JSON.parse(import_node_fs4.default.readFileSync(storePath, "utf8"));
+    if (!import_node_fs5.default.existsSync(storePath)) return { items: [] };
+    const parsed = JSON.parse(import_node_fs5.default.readFileSync(storePath, "utf8"));
     const items = Array.isArray(parsed.items) ? parsed.items : [];
     return {
       focusedId: typeof parsed.focusedId === "string" ? parsed.focusedId : void 0,
@@ -22681,7 +22829,7 @@ function readStudioStore(storePath) {
 
 // src/sidecar/server.ts
 var import_meta = {};
-var SKIP_DIRS2 = /* @__PURE__ */ new Set([
+var SKIP_DIRS3 = /* @__PURE__ */ new Set([
   "node_modules",
   ".git",
   "dist",
@@ -22691,17 +22839,17 @@ var SKIP_DIRS2 = /* @__PURE__ */ new Set([
   "coverage"
 ]);
 function resolveAssetsDir(explicit) {
-  if (explicit && import_node_fs5.default.existsSync(import_node_path5.default.join(explicit, "index.html"))) {
+  if (explicit && import_node_fs6.default.existsSync(import_node_path6.default.join(explicit, "index.html"))) {
     return explicit;
   }
-  const here = typeof __dirname !== "undefined" ? __dirname : import_node_path5.default.dirname((0, import_node_url2.fileURLToPath)(import_meta.url));
+  const here = typeof __dirname !== "undefined" ? __dirname : import_node_path6.default.dirname((0, import_node_url2.fileURLToPath)(import_meta.url));
   const candidates = [
-    import_node_path5.default.resolve(here, ".."),
-    import_node_path5.default.resolve(here, "..", "sidecars", "pele_studio"),
-    import_node_path5.default.resolve(here, "..", "..", "sidecars", "pele_studio")
+    import_node_path6.default.resolve(here, ".."),
+    import_node_path6.default.resolve(here, "..", "sidecars", "pele_studio"),
+    import_node_path6.default.resolve(here, "..", "..", "sidecars", "pele_studio")
   ];
   for (const dir of candidates) {
-    if (import_node_fs5.default.existsSync(import_node_path5.default.join(dir, "index.html"))) {
+    if (import_node_fs6.default.existsSync(import_node_path6.default.join(dir, "index.html"))) {
       return dir;
     }
   }
@@ -22709,12 +22857,12 @@ function resolveAssetsDir(explicit) {
 }
 function walkDiagramFiles(rootPath, maxFiles = 200, maxDepth = 5) {
   const results = [];
-  if (!rootPath || !import_node_fs5.default.existsSync(rootPath)) return results;
-  const stat = import_node_fs5.default.statSync(rootPath);
+  if (!rootPath || !import_node_fs6.default.existsSync(rootPath)) return results;
+  const stat = import_node_fs6.default.statSync(rootPath);
   if (stat.isFile()) {
-    const ext = import_node_path5.default.extname(rootPath).toLowerCase();
+    const ext = import_node_path6.default.extname(rootPath).toLowerCase();
     if (ext === ".md" || ext === ".markdown" || ext === ".mmd" || ext === ".mermaid") {
-      return [import_node_path5.default.resolve(rootPath)];
+      return [import_node_path6.default.resolve(rootPath)];
     }
     return results;
   }
@@ -22722,7 +22870,7 @@ function walkDiagramFiles(rootPath, maxFiles = 200, maxDepth = 5) {
     if (depth > maxDepth || results.length >= maxFiles) return;
     let entries;
     try {
-      entries = import_node_fs5.default.readdirSync(dir, { withFileTypes: true });
+      entries = import_node_fs6.default.readdirSync(dir, { withFileTypes: true });
     } catch {
       return;
     }
@@ -22730,50 +22878,48 @@ function walkDiagramFiles(rootPath, maxFiles = 200, maxDepth = 5) {
     for (const entry of entries) {
       if (results.length >= maxFiles) return;
       if (entry.name.startsWith(".") && entry.name !== ".agents") continue;
-      const full = import_node_path5.default.join(dir, entry.name);
+      const full = import_node_path6.default.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (!SKIP_DIRS2.has(entry.name)) visit(full, depth + 1);
+        if (!SKIP_DIRS3.has(entry.name)) visit(full, depth + 1);
       } else if (entry.isFile()) {
-        const ext = import_node_path5.default.extname(entry.name).toLowerCase();
+        const ext = import_node_path6.default.extname(entry.name).toLowerCase();
         if (ext === ".md" || ext === ".markdown" || ext === ".mmd" || ext === ".mermaid") {
           results.push(full);
         }
       }
     }
   }
-  visit(import_node_path5.default.resolve(rootPath), 0);
+  visit(import_node_path6.default.resolve(rootPath), 0);
   return results;
 }
 function parseCardArtifact(filePath) {
   try {
-    const html = import_node_fs5.default.readFileSync(filePath, "utf8");
-    const metaMatch = /<script\s+type="application\/json"\s+id="pele-card-meta">([\s\S]*?)<\/script>/i.exec(html);
-    const codeMatch = /<code\s+id="pele-source-code">([\s\S]*?)<\/code>/i.exec(html);
-    if (!metaMatch || !codeMatch) return null;
-    const meta = JSON.parse(metaMatch[1]);
-    const decodedCode = codeMatch[1].replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+    const html = import_node_fs6.default.readFileSync(filePath, "utf8");
+    const parsed = parseCardHtml(html, import_node_path6.default.basename(filePath, ".html"));
+    if (!parsed) return null;
     return {
       id: `card:${filePath}`,
       kind: "card-artifact",
-      title: meta.title || import_node_path5.default.basename(filePath, ".html"),
+      title: parsed.title,
       filePath,
-      code: decodedCode,
-      diagramType: meta.diagramType,
-      sourceHash: meta.sourceHash || hashCode(decodedCode),
-      updatedAt: import_node_fs5.default.statSync(filePath).mtime.toISOString(),
-      heightMode: meta.heightMode,
-      fixedHeight: meta.fixedHeight,
-      maxHeight: meta.maxHeight
+      code: parsed.code,
+      diagramType: parsed.diagramType,
+      sourceHash: parsed.sourceHash,
+      updatedAt: import_node_fs6.default.statSync(filePath).mtime.toISOString(),
+      standalonePage: parsed.standalonePage,
+      heightMode: parsed.heightMode,
+      fixedHeight: parsed.fixedHeight,
+      maxHeight: parsed.maxHeight
     };
   } catch {
     return null;
   }
 }
 function collectMarkdownItems(filePath, source, displayBase) {
-  const rel = displayBase ? import_node_path5.default.relative(displayBase, filePath) || import_node_path5.default.basename(filePath) : import_node_path5.default.basename(filePath);
-  const ext = import_node_path5.default.extname(filePath).toLowerCase();
+  const rel = displayBase ? import_node_path6.default.relative(displayBase, filePath) || import_node_path6.default.basename(filePath) : import_node_path6.default.basename(filePath);
+  const ext = import_node_path6.default.extname(filePath).toLowerCase();
   try {
-    const raw = import_node_fs5.default.readFileSync(filePath, "utf8");
+    const raw = import_node_fs6.default.readFileSync(filePath, "utf8");
     if (ext === ".mmd" || ext === ".mermaid") {
       const normalized = raw.replace(/\r\n/g, "\n");
       return [
@@ -22781,7 +22927,7 @@ function collectMarkdownItems(filePath, source, displayBase) {
           id: `${source}:mmd:${filePath}`,
           source,
           kind: "mmd-file",
-          title: import_node_path5.default.basename(filePath),
+          title: import_node_path6.default.basename(filePath),
           filePath,
           code: normalized,
           sourceHash: hashCode(normalized),
@@ -22820,7 +22966,7 @@ function buildStateSnapshot(params) {
       if (seenCardPaths.has(`${rec.kind}:${rec.filePath}:${rec.blockIndex ?? ""}`)) continue;
       seenCardPaths.add(`${rec.kind}:${rec.filePath}:${rec.blockIndex ?? ""}`);
     }
-    if (rec.kind === "card-artifact" && rec.filePath && import_node_fs5.default.existsSync(rec.filePath)) {
+    if (rec.kind === "card-artifact" && rec.filePath && import_node_fs6.default.existsSync(rec.filePath)) {
       const parsed = parseCardArtifact(rec.filePath);
       if (parsed) {
         items.push({
@@ -22832,7 +22978,7 @@ function buildStateSnapshot(params) {
           code: parsed.code,
           sourceHash: parsed.sourceHash,
           diagramType: parsed.diagramType,
-          subtitle: import_node_path5.default.basename(rec.filePath),
+          subtitle: import_node_path6.default.basename(rec.filePath),
           canSave: true
         });
         continue;
@@ -22848,16 +22994,16 @@ function buildStateSnapshot(params) {
       code: rec.code,
       sourceHash: rec.sourceHash,
       diagramType: rec.diagramType,
-      subtitle: rec.filePath ? import_node_path5.default.basename(rec.filePath) : "Session Draft",
+      subtitle: rec.filePath ? import_node_path6.default.basename(rec.filePath) : "Session Draft",
       canSave: Boolean(rec.filePath && (rec.kind === "markdown-block" || rec.kind === "mmd-file" || rec.kind === "card-artifact"))
     });
   }
   if (params.convId && isValidConversationId(params.convId)) {
     const brainDir = resolveBrainDir(params.convId);
-    if (import_node_fs5.default.existsSync(brainDir)) {
-      for (const entry of import_node_fs5.default.readdirSync(brainDir, { withFileTypes: true })) {
+    if (import_node_fs6.default.existsSync(brainDir)) {
+      for (const entry of import_node_fs6.default.readdirSync(brainDir, { withFileTypes: true })) {
         if (!entry.isFile()) continue;
-        const full = import_node_path5.default.join(brainDir, entry.name);
+        const full = import_node_path6.default.join(brainDir, entry.name);
         if (entry.name.endsWith(".html") && entry.name.startsWith("pele-")) {
           if (seenCardPaths.has(`card-artifact:${full}:`)) continue;
           const parsed = parseCardArtifact(full);
@@ -22883,7 +23029,7 @@ function buildStateSnapshot(params) {
     }
   }
   for (const root of params.workspaceRoots) {
-    const baseForRel = import_node_fs5.default.existsSync(root) && import_node_fs5.default.statSync(root).isFile() ? import_node_path5.default.dirname(root) : root;
+    const baseForRel = import_node_fs6.default.existsSync(root) && import_node_fs6.default.statSync(root).isFile() ? import_node_path6.default.dirname(root) : root;
     const files = walkDiagramFiles(root);
     for (const file of files) {
       items.push(...collectMarkdownItems(file, "workspace", baseForRel));
@@ -22910,7 +23056,7 @@ function handleSaveRequest(body, allowedRoots) {
   if (!isPathInsideAllowedRoots(filePath, allowedRoots)) {
     return { status: 403, payload: { error: "Target path is outside allowed workspace or brain directories." } };
   }
-  if (!import_node_fs5.default.existsSync(filePath)) {
+  if (!import_node_fs6.default.existsSync(filePath)) {
     return { status: 404, payload: { error: `File not found: ${filePath}` } };
   }
   try {
@@ -22936,7 +23082,7 @@ function handleSaveRequest(body, allowedRoots) {
       };
     }
     if (body.kind === "mmd-file") {
-      const currentRaw = import_node_fs5.default.readFileSync(filePath, "utf8");
+      const currentRaw = import_node_fs6.default.readFileSync(filePath, "utf8");
       const eol = currentRaw.includes("\r\n") ? "\r\n" : "\n";
       const currentHash = hashCode(currentRaw);
       if (expectedHash && currentHash !== expectedHash) {
@@ -22969,6 +23115,7 @@ function handleSaveRequest(body, allowedRoots) {
         code: newCode.replace(/\r\n/g, "\n"),
         title: body.title || existing.title,
         theme,
+        standalonePage: existing.standalonePage,
         height: preservedHeight,
         maxHeight: existing.maxHeight,
         sourceHash: updatedHash
@@ -22993,7 +23140,7 @@ function handleSaveRequest(body, allowedRoots) {
 function collectAllowedRoots(workspaceRoots, convId) {
   const roots = [...workspaceRoots];
   const appData = resolveAppDataDir(convId);
-  roots.push(import_node_path5.default.join(appData, "brain"));
+  roots.push(import_node_path6.default.join(appData, "brain"));
   if (convId && isValidConversationId(convId)) {
     roots.push(resolveBrainDir(convId));
   }
@@ -23005,21 +23152,21 @@ function parseWorkspaceQuery(raw) {
     try {
       return fromFileUri(entry);
     } catch {
-      return import_node_path5.default.resolve(entry);
+      return import_node_path6.default.resolve(entry);
     }
   });
 }
 async function startStandalonePreviewServer(options = {}) {
   const assetsDir = resolveAssetsDir(options.assetsDir);
   const token = import_node_crypto2.default.randomBytes(24).toString("hex");
-  const targetAbs = options.targetPath ? import_node_path5.default.resolve(options.targetPath) : process.cwd();
+  const targetAbs = options.targetPath ? import_node_path6.default.resolve(options.targetPath) : process.cwd();
   const targetUri = toFileUri(targetAbs);
   let watchBump = 0;
   const watchers = [];
-  if (options.watch !== false && import_node_fs5.default.existsSync(targetAbs)) {
+  if (options.watch !== false && import_node_fs6.default.existsSync(targetAbs)) {
     let timer;
     try {
-      const watcher = import_node_fs5.default.watch(
+      const watcher = import_node_fs6.default.watch(
         targetAbs,
         { recursive: process.platform === "win32" || process.platform === "darwin" },
         () => {
@@ -23053,9 +23200,9 @@ async function startStandalonePreviewServer(options = {}) {
     }
   };
 })();`;
-  const indexHtml = import_node_fs5.default.readFileSync(import_node_path5.default.join(assetsDir, "index.html"), "utf8");
-  const stylesCss = import_node_fs5.default.readFileSync(import_node_path5.default.join(assetsDir, "styles.css"), "utf8");
-  const uiJs = import_node_fs5.default.readFileSync(import_node_path5.default.join(assetsDir, "dist", "ui.js"), "utf8");
+  const indexHtml = import_node_fs6.default.readFileSync(import_node_path6.default.join(assetsDir, "index.html"), "utf8");
+  const stylesCss = import_node_fs6.default.readFileSync(import_node_path6.default.join(assetsDir, "styles.css"), "utf8");
+  const uiJs = import_node_fs6.default.readFileSync(import_node_path6.default.join(assetsDir, "dist", "ui.js"), "utf8");
   const server = import_node_http.default.createServer((req, res) => {
     const reqUrl = new URL(req.url || "/", "http://127.0.0.1");
     const pathname = reqUrl.pathname;
@@ -23151,17 +23298,17 @@ async function runAntigravitySidecar() {
   const assetsDir = resolveAssetsDir();
   const app = new SidecarApp();
   let watchBump = 0;
-  app.page("/", () => import_node_fs5.default.readFileSync(import_node_path5.default.join(assetsDir, "index.html"), "utf8"));
+  app.page("/", () => import_node_fs6.default.readFileSync(import_node_path6.default.join(assetsDir, "index.html"), "utf8"));
   app.api(
     "/styles.css",
-    () => new Response(import_node_fs5.default.readFileSync(import_node_path5.default.join(assetsDir, "styles.css"), "utf8"), {
+    () => new Response(import_node_fs6.default.readFileSync(import_node_path6.default.join(assetsDir, "styles.css"), "utf8"), {
       contentType: "text/css; charset=utf-8"
     }),
     "GET"
   );
   app.api(
     "/ui.js",
-    () => new Response(import_node_fs5.default.readFileSync(import_node_path5.default.join(assetsDir, "dist", "ui.js"), "utf8"), {
+    () => new Response(import_node_fs6.default.readFileSync(import_node_path6.default.join(assetsDir, "dist", "ui.js"), "utf8"), {
       contentType: "application/javascript; charset=utf-8"
     }),
     "GET"
@@ -23233,6 +23380,7 @@ Usage:
   agy-pele render [input.mmd | -] [-o <out.svg|out.html>] [-f svg|html] [--theme <mode>] [--title <str>] [--height auto|compact|<px>] [--max-height <px>]
   agy-pele check <paths...> [--strict-mermaid] [--json]
   agy-pele extract <file.md> -o <out-dir> [-f svg|html] [--theme <mode>] [--height auto|compact|<px>] [--max-height <px>] [--json]
+  agy-pele upgrade-cards [paths...] [--dry-run] [--json]
   agy-pele preview [target] [--port <num>] [--no-open] [--no-watch]
   agy-pele --help | --version
 
@@ -23300,7 +23448,7 @@ async function handleRender(args) {
     }
     source = await readAllStdin();
   } else {
-    source = import_node_fs6.default.readFileSync(import_node_path6.default.resolve(inputPath), "utf8");
+    source = import_node_fs7.default.readFileSync(import_node_path7.default.resolve(inputPath), "utf8");
   }
   const resolvedFormat = format ?? (outputPath && outputPath.toLowerCase().endsWith(".html") ? "html" : "svg");
   const theme = normalizeThemeMode(themeRaw);
@@ -23311,7 +23459,7 @@ async function handleRender(args) {
   const payload = resolvedFormat === "html" ? buildCardHtml({
     rendered,
     code: source.replace(/\r\n/g, "\n"),
-    title: title || (inputPath && inputPath !== "-" ? import_node_path6.default.basename(inputPath, import_node_path6.default.extname(inputPath)) : "Mermaid Diagram"),
+    title: title || (inputPath && inputPath !== "-" ? import_node_path7.default.basename(inputPath, import_node_path7.default.extname(inputPath)) : "Mermaid Diagram"),
     theme,
     standalonePage: true,
     height: heightOpt,
@@ -23319,7 +23467,7 @@ async function handleRender(args) {
     sourceHash: hashCode(source)
   }) : rendered.themedSvg;
   if (outputPath) {
-    writeFileAtomic(import_node_path6.default.resolve(outputPath), payload);
+    writeFileAtomic(import_node_path7.default.resolve(outputPath), payload);
   } else {
     process.stdout.write(payload);
     if (!payload.endsWith("\n")) process.stdout.write("\n");
@@ -23396,11 +23544,11 @@ function handleExtract(args) {
     }
   }
   if (!inputFile) throw new Error("extract requires an input Markdown file path.");
-  const absInput = import_node_path6.default.resolve(inputFile);
-  const raw = import_node_fs6.default.readFileSync(absInput, "utf8");
+  const absInput = import_node_path7.default.resolve(inputFile);
+  const raw = import_node_fs7.default.readFileSync(absInput, "utf8");
   const { blocks } = extractMermaidBlocks(raw);
-  const absOutDir = import_node_path6.default.resolve(outDir);
-  import_node_fs6.default.mkdirSync(absOutDir, { recursive: true });
+  const absOutDir = import_node_path7.default.resolve(outDir);
+  import_node_fs7.default.mkdirSync(absOutDir, { recursive: true });
   const theme = normalizeThemeMode(themeRaw);
   const manifest = [];
   for (const block of blocks) {
@@ -23410,7 +23558,7 @@ function handleExtract(args) {
     });
     const num = String(block.index + 1).padStart(2, "0");
     const filename = `${num}-${rendered.type}-${slugify(block.title)}.${format}`;
-    const outPath = import_node_path6.default.join(absOutDir, filename);
+    const outPath = import_node_path7.default.join(absOutDir, filename);
     const content = format === "html" ? buildCardHtml({
       rendered,
       code: block.code,
@@ -23433,7 +23581,7 @@ function handleExtract(args) {
       outputPath: outPath
     });
   }
-  const manifestPath = import_node_path6.default.join(absOutDir, "manifest.json");
+  const manifestPath = import_node_path7.default.join(absOutDir, "manifest.json");
   writeFileAtomic(manifestPath, JSON.stringify({ source: absInput, format, count: manifest.length, items: manifest }, null, 2));
   if (json) {
     process.stdout.write(`${JSON.stringify({ ok: true, outDir: absOutDir, manifestPath, items: manifest }, null, 2)}
@@ -23484,6 +23632,51 @@ async function handlePreview(args) {
   });
   return 0;
 }
+function handleUpgradeCards(args) {
+  let dryRun = false;
+  let json = false;
+  const explicitTargets = [];
+  for (const arg of args) {
+    if (arg === "--dry-run") dryRun = true;
+    else if (arg === "--json") json = true;
+    else if (arg.startsWith("-")) throw new Error(`Unknown option: ${arg}`);
+    else explicitTargets.push(arg);
+  }
+  let targets;
+  if (explicitTargets.length > 0) {
+    for (const t of explicitTargets) {
+      if (!import_node_fs7.default.existsSync(import_node_path7.default.resolve(t))) {
+        throw new Error(`Path not found: ${t}`);
+      }
+    }
+    targets = explicitTargets;
+  } else {
+    const defaultBrainDir = import_node_path7.default.join(resolveAppDataDir(), "brain");
+    targets = import_node_fs7.default.existsSync(defaultBrainDir) ? [defaultBrainDir] : [];
+  }
+  const summary = upgradeCardArtifacts(targets, { dryRun });
+  if (json) {
+    process.stdout.write(`${JSON.stringify({ ...summary, dryRun }, null, 2)}
+`);
+  } else {
+    const verb = dryRun ? "Would upgrade" : "Upgraded";
+    process.stdout.write(
+      `${verb} ${summary.cardsUpgraded} of ${summary.cardsFound} Pele card artifact(s) (${summary.cardsUnchanged} already up to date).
+`
+    );
+    for (const item of summary.items) {
+      if (item.changed) {
+        process.stdout.write(`  - ${item.filePath} (${item.diagramType}, height=${item.heightMode})
+`);
+      }
+    }
+    for (const err of summary.errors) {
+      process.stderr.write(`  ! ${err.filePath}: ${err.error}
+`);
+    }
+  }
+  return summary.ok ? 0 : 1;
+}
 async function runCli(argv) {
   const [cmd, ...rest] = argv;
   if (!cmd || cmd === "-h" || cmd === "--help" || cmd === "help") {
@@ -23498,6 +23691,7 @@ async function runCli(argv) {
   if (cmd === "render") return handleRender(rest);
   if (cmd === "check") return handleCheck(rest);
   if (cmd === "extract") return handleExtract(rest);
+  if (cmd === "upgrade-cards") return handleUpgradeCards(rest);
   if (cmd === "preview") return handlePreview(rest);
   throw new Error(`Unknown command: ${cmd}. Run "agy-pele --help" for usage.`);
 }

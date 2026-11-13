@@ -134,7 +134,10 @@ agy-pele check README.md docs/ --strict-mermaid
 # 4. 从长文档批量提取所有 Mermaid 图表为 SVG（并输出 manifest.json）
 agy-pele extract docs/design.md -o ./assets/diagrams -f svg
 
-# 5. 在浏览器中打开本地实时热更新预览工作台
+# 5. 原位升级所有历史会话中已生成的旧版卡片（自动补齐自适应高度与全屏按钮）
+agy-pele upgrade-cards
+
+# 6. 在浏览器中打开本地实时热更新预览工作台
 agy-pele preview README.md --watch
 ```
 

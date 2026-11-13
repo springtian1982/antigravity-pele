@@ -4,8 +4,9 @@ import { buildCardHtml, normalizeCardHeight, type CardHeightOption } from '../co
 import { checkDiagramPaths } from '../core/checker.js';
 import { extractMermaidBlocks, hashCode, writeFileAtomic } from '../core/markdown.js';
 import { normalizeThemeMode } from '../core/palette.js';
-import { openInDefaultBrowser, slugify } from '../core/platform.js';
+import { openInDefaultBrowser, resolveAppDataDir, slugify } from '../core/platform.js';
 import { renderDiagram } from '../core/renderer.js';
+import { upgradeCardArtifacts } from '../core/upgrader.js';
 import { startStandalonePreviewServer } from '../sidecar/server.js';
 
 const VERSION = '0.1.0';
@@ -17,6 +18,7 @@ Usage:
   agy-pele render [input.mmd | -] [-o <out.svg|out.html>] [-f svg|html] [--theme <mode>] [--title <str>] [--height auto|compact|<px>] [--max-height <px>]
   agy-pele check <paths...> [--strict-mermaid] [--json]
   agy-pele extract <file.md> -o <out-dir> [-f svg|html] [--theme <mode>] [--height auto|compact|<px>] [--max-height <px>] [--json]
+  agy-pele upgrade-cards [paths...] [--dry-run] [--json]
   agy-pele preview [target] [--port <num>] [--no-open] [--no-watch]
   agy-pele --help | --version
 
@@ -300,6 +302,51 @@ async function handlePreview(args: string[]): Promise<number> {
   return 0;
 }
 
+function handleUpgradeCards(args: string[]): number {
+  let dryRun = false;
+  let json = false;
+  const explicitTargets: string[] = [];
+
+  for (const arg of args) {
+    if (arg === '--dry-run') dryRun = true;
+    else if (arg === '--json') json = true;
+    else if (arg.startsWith('-')) throw new Error(`Unknown option: ${arg}`);
+    else explicitTargets.push(arg);
+  }
+
+  let targets: string[];
+  if (explicitTargets.length > 0) {
+    for (const t of explicitTargets) {
+      if (!fs.existsSync(path.resolve(t))) {
+        throw new Error(`Path not found: ${t}`);
+      }
+    }
+    targets = explicitTargets;
+  } else {
+    const defaultBrainDir = path.join(resolveAppDataDir(), 'brain');
+    targets = fs.existsSync(defaultBrainDir) ? [defaultBrainDir] : [];
+  }
+
+  const summary = upgradeCardArtifacts(targets, { dryRun });
+  if (json) {
+    process.stdout.write(`${JSON.stringify({ ...summary, dryRun }, null, 2)}\n`);
+  } else {
+    const verb = dryRun ? 'Would upgrade' : 'Upgraded';
+    process.stdout.write(
+      `${verb} ${summary.cardsUpgraded} of ${summary.cardsFound} Pele card artifact(s) (${summary.cardsUnchanged} already up to date).\n`
+    );
+    for (const item of summary.items) {
+      if (item.changed) {
+        process.stdout.write(`  - ${item.filePath} (${item.diagramType}, height=${item.heightMode})\n`);
+      }
+    }
+    for (const err of summary.errors) {
+      process.stderr.write(`  ! ${err.filePath}: ${err.error}\n`);
+    }
+  }
+  return summary.ok ? 0 : 1;
+}
+
 export async function runCli(argv: string[]): Promise<number> {
   const [cmd, ...rest] = argv;
   if (!cmd || cmd === '-h' || cmd === '--help' || cmd === 'help') {
@@ -313,6 +360,7 @@ export async function runCli(argv: string[]): Promise<number> {
   if (cmd === 'render') return handleRender(rest);
   if (cmd === 'check') return handleCheck(rest);
   if (cmd === 'extract') return handleExtract(rest);
+  if (cmd === 'upgrade-cards') return handleUpgradeCards(rest);
   if (cmd === 'preview') return handlePreview(rest);
 
   throw new Error(`Unknown command: ${cmd}. Run "agy-pele --help" for usage.`);

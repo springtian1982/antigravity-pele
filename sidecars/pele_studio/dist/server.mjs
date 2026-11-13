@@ -22421,6 +22421,35 @@ function renderDiagram(source, options = {}) {
   };
 }
 
+// src/core/upgrader.ts
+function parseCardHtml(html, fallbackTitle = "Mermaid Diagram") {
+  if (!html.includes('id="pele-card-meta"') || !html.includes('id="pele-source-code"')) {
+    return null;
+  }
+  const metaMatch = /<script\s+type="application\/json"\s+id="pele-card-meta">([\s\S]*?)<\/script>/i.exec(html);
+  const codeMatch = /<code\s+id="pele-source-code">([\s\S]*?)<\/code>/i.exec(html);
+  if (!metaMatch || !codeMatch) return null;
+  try {
+    const meta = JSON.parse(metaMatch[1]);
+    const decodedCode = codeMatch[1].replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&").replace(/\r\n/g, "\n");
+    const height = meta.heightMode === "fixed" && typeof meta.fixedHeight === "number" ? normalizeCardHeight(meta.fixedHeight) : meta.heightMode === "compact" ? "compact" : "auto";
+    return {
+      title: meta.title?.trim() || fallbackTitle,
+      code: decodedCode,
+      theme: normalizeThemeMode(meta.theme),
+      standalonePage: /<body[^>]*\bis-standalone\b/i.test(html),
+      height,
+      heightMode: meta.heightMode,
+      fixedHeight: meta.fixedHeight,
+      maxHeight: typeof meta.maxHeight === "number" && Number.isFinite(meta.maxHeight) ? meta.maxHeight : void 0,
+      sourceHash: meta.sourceHash || hashCode(decodedCode),
+      diagramType: meta.diagramType
+    };
+  } catch {
+    return null;
+  }
+}
+
 // src/core/studio-store.ts
 import fs4 from "node:fs";
 import path3 from "node:path";
@@ -22514,23 +22543,21 @@ function walkDiagramFiles(rootPath, maxFiles = 200, maxDepth = 5) {
 function parseCardArtifact(filePath) {
   try {
     const html = fs5.readFileSync(filePath, "utf8");
-    const metaMatch = /<script\s+type="application\/json"\s+id="pele-card-meta">([\s\S]*?)<\/script>/i.exec(html);
-    const codeMatch = /<code\s+id="pele-source-code">([\s\S]*?)<\/code>/i.exec(html);
-    if (!metaMatch || !codeMatch) return null;
-    const meta = JSON.parse(metaMatch[1]);
-    const decodedCode = codeMatch[1].replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+    const parsed = parseCardHtml(html, path4.basename(filePath, ".html"));
+    if (!parsed) return null;
     return {
       id: `card:${filePath}`,
       kind: "card-artifact",
-      title: meta.title || path4.basename(filePath, ".html"),
+      title: parsed.title,
       filePath,
-      code: decodedCode,
-      diagramType: meta.diagramType,
-      sourceHash: meta.sourceHash || hashCode(decodedCode),
+      code: parsed.code,
+      diagramType: parsed.diagramType,
+      sourceHash: parsed.sourceHash,
       updatedAt: fs5.statSync(filePath).mtime.toISOString(),
-      heightMode: meta.heightMode,
-      fixedHeight: meta.fixedHeight,
-      maxHeight: meta.maxHeight
+      standalonePage: parsed.standalonePage,
+      heightMode: parsed.heightMode,
+      fixedHeight: parsed.fixedHeight,
+      maxHeight: parsed.maxHeight
     };
   } catch {
     return null;
@@ -22736,6 +22763,7 @@ function handleSaveRequest(body, allowedRoots) {
         code: newCode.replace(/\r\n/g, "\n"),
         title: body.title || existing.title,
         theme,
+        standalonePage: existing.standalonePage,
         height: preservedHeight,
         maxHeight: existing.maxHeight,
         sourceHash: updatedHash

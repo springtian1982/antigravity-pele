@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -155,6 +156,18 @@ function install() {
     fs.symlinkSync(installedShim, targetLink);
     console.log(`Installed plugin to ${pluginDest}`);
     console.log(`Linked CLI launcher: ${targetLink} -> ${installedShim}`);
+  }
+
+  if (!process.argv.includes('--no-upgrade-cards')) {
+    try {
+      execFileSync(process.execPath, [path.join(pluginDest, 'dist', 'cli.cjs'), 'upgrade-cards'], {
+        stdio: 'inherit',
+      });
+    } catch (err) {
+      console.warn(
+        `Warning: could not upgrade existing session cards: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   }
 }
 
