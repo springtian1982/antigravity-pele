@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "antigravity-pele": {
+      "command": "node",
+      "args": ["dist/mcp.cjs"]
+    }
+  }
+}

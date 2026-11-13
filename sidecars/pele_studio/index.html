@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Pele Studio</title>
+  <script src="/preload.js"></script>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="studio-app" class="studio-app" data-view-mode="split" data-theme-mode="flexoki">
+    <header class="studio-header">
+      <div class="studio-brand">
+        <button type="button" id="toggle-sidebar" class="btn-icon" aria-label="Toggle diagram list" aria-expanded="true" title="Toggle diagram list">☰</button>
+        <span class="brand-name">Pele Studio</span>
+        <span id="active-badge" class="badge">scratchpad</span>
+      </div>
+
+      <div id="studio-toolbar" role="toolbar" focusgroup="toolbar wrap" aria-label="Pele Studio controls">
+        <div role="group" aria-label="View mode">
+          <button type="button" class="btn" data-view="split" aria-pressed="true">分栏</button>
+          <button type="button" class="btn" data-view="preview" aria-pressed="false">预览</button>
+          <button type="button" class="btn" data-view="code" aria-pressed="false">源码</button>
+        </div>
+        <span role="separator" aria-orientation="vertical"></span>
+        <div role="group" aria-label="Theme">
+          <select id="theme-select" class="select" aria-label="Theme preset">
+            <option value="flexoki">Flexoki Auto</option>
+            <option value="flexoki-light">Flexoki Light</option>
+            <option value="flexoki-dark">Flexoki Dark</option>
+            <option value="host">Host Theme</option>
+          </select>
+        </div>
+        <span role="separator" aria-orientation="vertical"></span>
+        <div role="group" aria-label="Zoom">
+          <button type="button" id="zoom-out" class="btn" aria-label="Zoom out" title="Zoom out">-</button>
+          <button type="button" id="zoom-reset" class="btn" title="Reset zoom"><span id="zoom-label">100%</span></button>
+          <button type="button" id="zoom-in" class="btn" aria-label="Zoom in" title="Zoom in">+</button>
+        </div>
+        <span role="separator" aria-orientation="vertical"></span>
+        <div role="group" aria-label="Actions">
+          <button type="button" class="btn copy-button" command="--copy" commandfor="studio-editor" title="Copy Mermaid source">复制</button>
+          <button type="button" id="save-btn" class="btn btn-primary" aria-disabled="true" title="Save changes back to file">保存回原文件</button>
+          <button type="button" id="export-svg" class="btn" title="Export SVG">SVG</button>
+          <select id="png-scale" class="select select-compact" aria-label="PNG scale">
+            <option value="1">1x</option>
+            <option value="2" selected>2x</option>
+            <option value="3">3x</option>
+          </select>
+          <button type="button" id="export-png" class="btn" title="Export PNG">PNG</button>
+        </div>
+      </div>
+      <span id="studio-status" class="tip" role="status"></span>
+    </header>
+
+    <div class="studio-main">
+      <aside id="studio-sidebar" class="studio-sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-heading">Scratchpad 草稿</div>
+          <button type="button" id="scratchpad-btn" class="nav-item is-active">
+            <span class="nav-title">自由草稿页 (Scratchpad)</span>
+            <span class="nav-sub">实时调试 33 种图表语法</span>
+          </button>
+          <label class="template-label" for="template-select">快速模板</label>
+          <select id="template-select" class="select select-full">
+            <option value="">-- 插入扩展语法示例 --</option>
+            <option value="swimlane">Swimlane 跨泳道流程 (swimlane-beta)</option>
+            <option value="agentflow">AgentFlow 智能体链路 (agentflow-beta)</option>
+            <option value="gantt">Gantt 项目甘特图 (gantt)</option>
+            <option value="mindmap">Mindmap 思维导图 (mindmap)</option>
+            <option value="sequence">Sequence 时序图 (sequenceDiagram)</option>
+            <option value="railroad">Railroad 语法铁路图 (railroad-ebnf-beta)</option>
+            <option value="venn">Venn 集合关系图 (venn-beta)</option>
+            <option value="cynefin">Cynefin 决策框架 (cynefin-beta)</option>
+          </select>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-heading">当前对话图表 <span id="conv-count" class="count-pill">0</span></div>
+          <div id="conv-list" class="nav-list"></div>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-heading">工作区文档图表 <span id="ws-count" class="count-pill">0</span></div>
+          <div id="ws-list" class="nav-list"></div>
+        </div>
+      </aside>
+
+      <section class="studio-workspace">
+        <div class="editor-pane">
+          <div class="pane-bar">
+            <span id="active-file-path" class="file-path">Scratchpad (内存草稿，不修改任何磁盘文件)</span>
+            <span id="dirty-indicator" class="dirty-dot hidden" title="Unsaved modifications">● 未保存</span>
+          </div>
+          <textarea id="studio-editor" class="editor-textarea" spellcheck="false" aria-label="Mermaid source editor"></textarea>
+          <div id="editor-diag" class="editor-diag is-ok">Ready · Pele 1.13.0</div>
+        </div>
+        <div class="preview-pane">
+          <div id="preview-stage" class="preview-stage"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script src="/ui.js"></script>
+</body>
+</html>

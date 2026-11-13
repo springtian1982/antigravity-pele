@@ -1,0 +1,18 @@
+{
+  "name": "antigravity-pele",
+  "displayName": "Antigravity Pele",
+  "version": "0.1.0",
+  "description": "High-performance Mermaid 12.1 & extended 33-type diagram renderer powered by Obsidian Pele — inline Flexoki cards, Pele Studio sidecar, and cross-platform agy-pele CLI.",
+  "author": {
+    "name": "springtian",
+    "url": "https://github.com/springtian1982"
+  },
+  "homepage": "https://github.com/springtian1982/antigravity-pele",
+  "repository": "https://github.com/springtian1982/antigravity-pele",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Draw an architecture and swimlane diagram for this project using Pele",
+    "Check all Markdown files in this workspace for Mermaid syntax issues with agy-pele",
+    "Open the diagrams from README.md in Pele Studio"
+  ]
+}
