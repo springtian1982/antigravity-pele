@@ -1,4 +1,8 @@
-import { buildThemeCss, type ThemeMode } from './palette.js';
+import {
+  buildInteractiveThemeCss,
+  normalizeThemeMode,
+  type ThemeMode,
+} from './palette.js';
 import { slugify } from './platform.js';
 import type { RenderDiagramOutput } from './renderer.js';
 
@@ -60,7 +64,7 @@ function getRuntimeScript(override?: string): string {
  * 2x PNG export) and automatic Flexoki Light/Dark adaptation.
  */
 export function buildCardHtml(options: BuildCardOptions): string {
-  const theme = options.theme ?? 'flexoki';
+  const theme = normalizeThemeMode(options.theme);
   const title = options.title?.trim() || 'Mermaid Diagram';
   const slug = slugify(title);
   const standalone = Boolean(options.standalonePage);
@@ -110,8 +114,9 @@ export function buildCardHtml(options: BuildCardOptions): string {
   });
 
   const runtimeJs = getRuntimeScript(options.runtimeJsOverride);
-  const themeCss = buildThemeCss('#pele-card', theme);
+  const themeCss = buildInteractiveThemeCss('#pele-card');
   const bodyClass = standalone ? 'pele-body is-standalone' : 'pele-body is-inline';
+  const sel = (val: ThemeMode) => (theme === val ? ' selected' : '');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -134,10 +139,22 @@ export function buildCardHtml(options: BuildCardOptions): string {
       color: var(--pele-fg);
       -webkit-font-smoothing: antialiased;
     }
+    ${standalone ? `.pele-body.is-standalone:has(#pele-card[data-theme-mode^="gov"]) {
+      background: #f0f6ff;
+    }
+    .pele-body.is-standalone:has(#pele-card[data-resolved-theme="dark"]),
+    .pele-body.is-standalone:has(#pele-card[data-theme-mode="flexoki-dark"]) {
+      background: #1c1b1a;
+    }
+    .pele-body.is-standalone:has(#pele-card[data-theme-mode^="gov"][data-resolved-theme="dark"]),
+    .pele-body.is-standalone:has(#pele-card[data-theme-mode="gov-dark"]) {
+      background: #0b1526;
+    }` : ''}
     .pele-card {
       ${standalone ? 'max-width: 1120px; margin: 0 auto;' : ''}
       background: var(--pele-bg);
       color: var(--pele-fg);
+      accent-color: var(--pele-accent);
       border: 1px solid var(--pele-border);
       border-radius: 10px;
       box-shadow: 0 1px 3px rgba(16, 15, 15, 0.08);
@@ -198,6 +215,9 @@ export function buildCardHtml(options: BuildCardOptions): string {
       color: var(--pele-accent);
       border: 1px solid var(--pele-border);
       white-space: nowrap;
+    }
+    .pele-card[data-resolved-theme="dark"] .pele-badge {
+      color: var(--pele-series-1, var(--pele-accent));
     }
     .pele-controls {
       display: flex;
@@ -262,6 +282,27 @@ export function buildCardHtml(options: BuildCardOptions): string {
     .pele-btn[data-failed] {
       color: var(--pele-critical, #af3029);
       border-color: var(--pele-critical, #af3029);
+    }
+    .pele-select {
+      min-block-size: 26px;
+      padding: 2px 6px;
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--pele-fg);
+      background: var(--pele-bg);
+      border: 1px solid var(--pele-border);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    @media (hover: hover) {
+      .pele-select:hover {
+        background: var(--pele-surface-alt);
+      }
+    }
+    .pele-select:focus-visible {
+      outline: 2px solid var(--pele-accent);
+      outline-offset: 1px;
     }
     .tip {
       font-size: 12px;
@@ -333,7 +374,7 @@ export function buildCardHtml(options: BuildCardOptions): string {
   </style>
 </head>
 <body class="${bodyClass}">
-  <div id="pele-card" class="pele-card" data-view-mode="diagram">
+  <div id="pele-card" class="pele-card" data-view-mode="diagram" data-theme-mode="${theme}">
     <header class="pele-header">
       <div class="pele-title-wrap">
         <span class="pele-title" title="${escapeHtml(title)}">${escapeHtml(title)}</span>
@@ -345,6 +386,22 @@ export function buildCardHtml(options: BuildCardOptions): string {
             <button type="button" class="pele-btn" data-view="diagram" aria-pressed="true">视图</button>
             <button type="button" class="pele-btn" data-view="code" aria-pressed="false">源码</button>
             <button type="button" class="pele-btn" data-view="split" aria-pressed="false">分栏</button>
+          </div>
+          <span role="separator" aria-orientation="vertical"></span>
+          <div role="group" aria-label="Theme">
+            <select id="pele-theme-select" class="pele-select" aria-label="配色风格" title="切换配色风格">
+              <optgroup label="默认暖墨 (Flexoki)">
+                <option value="flexoki"${sel('flexoki')}>默认暖墨 (自动)</option>
+                <option value="flexoki-light"${sel('flexoki-light')}>默认暖墨 (浅色)</option>
+                <option value="flexoki-dark"${sel('flexoki-dark')}>默认暖墨 (深色)</option>
+              </optgroup>
+              <optgroup label="政务清爽 (Gov)">
+                <option value="gov-light"${sel('gov-light')}>政务清爽 (浅色)</option>
+                <option value="gov"${sel('gov')}>政务清爽 (自动)</option>
+                <option value="gov-dark"${sel('gov-dark')}>政务清爽 (深色)</option>
+              </optgroup>
+              <option value="host"${sel('host')}>跟随宿主 (Host)</option>
+            </select>
           </div>
           <span role="separator" aria-orientation="vertical"></span>
           <div role="group" aria-label="Zoom">

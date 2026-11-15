@@ -1,4 +1,11 @@
-export type ThemeMode = 'flexoki' | 'flexoki-light' | 'flexoki-dark' | 'host';
+export type ThemeMode =
+  | 'flexoki'
+  | 'flexoki-light'
+  | 'flexoki-dark'
+  | 'gov'
+  | 'gov-light'
+  | 'gov-dark'
+  | 'host';
 
 export const FLEXOKI_LIGHT: Record<string, string> = {
   '--pele-bg': '#fffcf0',
@@ -48,6 +55,54 @@ export const FLEXOKI_DARK: Record<string, string> = {
   '--pele-series-8': '#ce5d97',
 };
 
+export const GOV_LIGHT: Record<string, string> = {
+  '--pele-bg': '#ffffff',
+  '--pele-fg': '#0f2744',
+  '--pele-muted': '#415a77',
+  '--pele-line': '#1e4e8c',
+  '--pele-surface': '#f0f6ff',
+  '--pele-surface-alt': '#e0ecff',
+  '--pele-border': '#6488b8',
+  '--pele-accent': '#0f5ec7',
+  '--pele-critical': '#c92a2a',
+  '--pele-error': '#c92a2a',
+  '--pele-fg-on-dark': '#ffffff',
+  '--pele-fg-on-light': '#0f2744',
+  '--pele-radius': '4px',
+  '--pele-series-1': '#0f5ec7',
+  '--pele-series-2': '#0d9488',
+  '--pele-series-3': '#15803d',
+  '--pele-series-4': '#0284c7',
+  '--pele-series-5': '#b45309',
+  '--pele-series-6': '#c92a2a',
+  '--pele-series-7': '#4338ca',
+  '--pele-series-8': '#0f766e',
+};
+
+export const GOV_DARK: Record<string, string> = {
+  '--pele-bg': '#0b1526',
+  '--pele-fg': '#e6f0ff',
+  '--pele-muted': '#94afd3',
+  '--pele-line': '#7cb3ff',
+  '--pele-surface': '#13233d',
+  '--pele-surface-alt': '#1c3257',
+  '--pele-border': '#4772ad',
+  '--pele-accent': '#2f7de1',
+  '--pele-critical': '#f87171',
+  '--pele-error': '#f87171',
+  '--pele-fg-on-dark': '#ffffff',
+  '--pele-fg-on-light': '#0f2744',
+  '--pele-radius': '4px',
+  '--pele-series-1': '#529bff',
+  '--pele-series-2': '#2dd4bf',
+  '--pele-series-3': '#4ade80',
+  '--pele-series-4': '#38bdf8',
+  '--pele-series-5': '#fbbf24',
+  '--pele-series-6': '#f87171',
+  '--pele-series-7': '#818cf8',
+  '--pele-series-8': '#34d399',
+};
+
 export const HOST_BRIDGE_VARS: Record<string, string> = {
   '--pele-bg': 'var(--card, #fffcf0)',
   '--pele-fg': 'var(--foreground, #100f0f)',
@@ -73,16 +128,57 @@ export const HOST_BRIDGE_VARS: Record<string, string> = {
 };
 
 export function normalizeThemeMode(raw?: string): ThemeMode {
-  if (raw === 'flexoki-light' || raw === 'light') return 'flexoki-light';
-  if (raw === 'flexoki-dark' || raw === 'dark') return 'flexoki-dark';
-  if (raw === 'host') return 'host';
+  const normalized = raw?.trim().toLowerCase();
+  if (normalized === 'flexoki-light' || normalized === 'light') return 'flexoki-light';
+  if (normalized === 'flexoki-dark' || normalized === 'dark') return 'flexoki-dark';
+  if (normalized === 'gov' || normalized === 'government' || normalized === 'gov-auto' || normalized === 'civic') {
+    return 'gov';
+  }
+  if (normalized === 'gov-light' || normalized === 'government-light' || normalized === 'civic-light') {
+    return 'gov-light';
+  }
+  if (normalized === 'gov-dark' || normalized === 'government-dark' || normalized === 'civic-dark') {
+    return 'gov-dark';
+  }
+  if (normalized === 'host') return 'host';
   return 'flexoki';
+}
+
+export function getFixedSchemeForTheme(mode?: string): 'light' | 'dark' | null {
+  const normalized = mode?.trim().toLowerCase();
+  if (normalized === 'flexoki-light' || normalized === 'gov-light' || normalized === 'light') {
+    return 'light';
+  }
+  if (normalized === 'flexoki-dark' || normalized === 'gov-dark' || normalized === 'dark') {
+    return 'dark';
+  }
+  return null;
 }
 
 function formatDeclBlock(vars: Record<string, string>): string {
   return Object.entries(vars)
     .map(([k, v]) => `  ${k}: ${v};`)
     .join('\n');
+}
+
+function formatSeriesDeclBlock(vars: Record<string, string>, indent = '    '): string {
+  return Array.from({ length: 8 }, (_, idx) => {
+    const key = `--pele-series-${idx + 1}`;
+    return `${indent}${key}: ${vars[key]};`;
+  }).join('\n');
+}
+
+function buildAutoThemeCss(
+  selector: string,
+  lightVars: Record<string, string>,
+  darkVars: Record<string, string>
+): string {
+  return [
+    `${selector} {\n${formatDeclBlock(lightVars)}\n}`,
+    `@media (prefers-color-scheme: dark) {\n  ${selector}:not([data-resolved-theme="light"]) {\n${formatDeclBlock(darkVars)}\n  }\n}`,
+    `:root.dark ${selector}:not([data-resolved-theme="light"]),\n${selector}[data-resolved-theme="dark"] {\n${formatDeclBlock(darkVars)}\n}`,
+    `:root.light ${selector}:not([data-resolved-theme="dark"]),\n${selector}[data-resolved-theme="light"] {\n${formatDeclBlock(lightVars)}\n}`,
+  ].join('\n');
 }
 
 /**
@@ -97,19 +193,47 @@ export function buildThemeCss(selector: string, mode: ThemeMode = 'flexoki'): st
   if (mode === 'flexoki-dark') {
     return `${selector} {\n${formatDeclBlock(FLEXOKI_DARK)}\n}`;
   }
+  if (mode === 'gov-light') {
+    return `${selector} {\n${formatDeclBlock(GOV_LIGHT)}\n}`;
+  }
+  if (mode === 'gov-dark') {
+    return `${selector} {\n${formatDeclBlock(GOV_DARK)}\n}`;
+  }
+  if (mode === 'gov') {
+    return buildAutoThemeCss(selector, GOV_LIGHT, GOV_DARK);
+  }
   if (mode === 'host') {
     return [
       `${selector} {\n${formatDeclBlock(HOST_BRIDGE_VARS)}\n}`,
-      `@media (prefers-color-scheme: dark) {\n  ${selector} {\n    --pele-series-1: ${FLEXOKI_DARK['--pele-series-1']};\n    --pele-series-2: ${FLEXOKI_DARK['--pele-series-2']};\n    --pele-series-3: ${FLEXOKI_DARK['--pele-series-3']};\n    --pele-series-4: ${FLEXOKI_DARK['--pele-series-4']};\n    --pele-series-5: ${FLEXOKI_DARK['--pele-series-5']};\n    --pele-series-6: ${FLEXOKI_DARK['--pele-series-6']};\n    --pele-series-7: ${FLEXOKI_DARK['--pele-series-7']};\n    --pele-series-8: ${FLEXOKI_DARK['--pele-series-8']};\n  }\n}`,
+      `@media (prefers-color-scheme: dark) {\n  ${selector} {\n${formatSeriesDeclBlock(FLEXOKI_DARK)}\n  }\n}`,
     ].join('\n');
   }
 
-  // 'flexoki' (auto): Light default + dark media query + explicit host class / attribute hooks.
+  return buildAutoThemeCss(selector, FLEXOKI_LIGHT, FLEXOKI_DARK);
+}
+
+/**
+ * Generates multi-theme CSS rules scoped to `selector[data-theme-mode="..."]`
+ * so interactive HTML cards and Pele Studio can switch between Flexoki,
+ * Government Clean, and Host palettes dynamically on the client without FOUC.
+ */
+export function buildInteractiveThemeCss(selector: string): string {
   return [
-    `${selector} {\n${formatDeclBlock(FLEXOKI_LIGHT)}\n}`,
-    `@media (prefers-color-scheme: dark) {\n  ${selector}:not([data-resolved-theme="light"]) {\n${formatDeclBlock(FLEXOKI_DARK)}\n  }\n}`,
-    `:root.dark ${selector}:not([data-resolved-theme="light"]),\n${selector}[data-resolved-theme="dark"] {\n${formatDeclBlock(FLEXOKI_DARK)}\n}`,
-    `:root.light ${selector}:not([data-resolved-theme="dark"]),\n${selector}[data-resolved-theme="light"] {\n${formatDeclBlock(FLEXOKI_LIGHT)}\n}`,
+    `${selector} {\n  color-scheme: light dark;\n${formatDeclBlock(FLEXOKI_LIGHT)}\n}`,
+    `@media (prefers-color-scheme: dark) {\n  ${selector}:not([data-theme-mode]):not([data-resolved-theme="light"]),\n  ${selector}[data-theme-mode="flexoki"]:not([data-resolved-theme="light"]) {\n${formatDeclBlock(FLEXOKI_DARK)}\n  }\n}`,
+    `:root.dark ${selector}:not([data-theme-mode]):not([data-resolved-theme="light"]),\n:root.dark ${selector}[data-theme-mode="flexoki"]:not([data-resolved-theme="light"]),\n${selector}[data-theme-mode="flexoki"][data-resolved-theme="dark"] {\n${formatDeclBlock(FLEXOKI_DARK)}\n}`,
+    `:root.light ${selector}:not([data-theme-mode]):not([data-resolved-theme="dark"]),\n:root.light ${selector}[data-theme-mode="flexoki"]:not([data-resolved-theme="dark"]),\n${selector}[data-theme-mode="flexoki"][data-resolved-theme="light"] {\n${formatDeclBlock(FLEXOKI_LIGHT)}\n}`,
+    `${selector}[data-theme-mode="flexoki-light"] {\n  color-scheme: light;\n${formatDeclBlock(FLEXOKI_LIGHT)}\n}`,
+    `${selector}[data-theme-mode="flexoki-dark"] {\n  color-scheme: dark;\n${formatDeclBlock(FLEXOKI_DARK)}\n}`,
+    `${selector}[data-theme-mode="gov"] {\n  color-scheme: light dark;\n${formatDeclBlock(GOV_LIGHT)}\n}`,
+    `@media (prefers-color-scheme: dark) {\n  ${selector}[data-theme-mode="gov"]:not([data-resolved-theme="light"]) {\n${formatDeclBlock(GOV_DARK)}\n  }\n}`,
+    `:root.dark ${selector}[data-theme-mode="gov"]:not([data-resolved-theme="light"]),\n${selector}[data-theme-mode="gov"][data-resolved-theme="dark"] {\n${formatDeclBlock(GOV_DARK)}\n}`,
+    `:root.light ${selector}[data-theme-mode="gov"]:not([data-resolved-theme="dark"]),\n${selector}[data-theme-mode="gov"][data-resolved-theme="light"] {\n${formatDeclBlock(GOV_LIGHT)}\n}`,
+    `${selector}[data-theme-mode="gov-light"] {\n  color-scheme: light;\n${formatDeclBlock(GOV_LIGHT)}\n}`,
+    `${selector}[data-theme-mode="gov-dark"] {\n  color-scheme: dark;\n${formatDeclBlock(GOV_DARK)}\n}`,
+    `${selector}[data-theme-mode="host"] {\n  color-scheme: light dark;\n${formatDeclBlock(HOST_BRIDGE_VARS)}\n}`,
+    `@media (prefers-color-scheme: dark) {\n  ${selector}[data-theme-mode="host"]:not([data-resolved-theme="light"]) {\n${formatSeriesDeclBlock(FLEXOKI_DARK)}\n  }\n}`,
+    `:root.dark ${selector}[data-theme-mode="host"]:not([data-resolved-theme="light"]),\n${selector}[data-theme-mode="host"][data-resolved-theme="dark"] {\n${formatSeriesDeclBlock(FLEXOKI_DARK, '  ')}\n}`,
   ].join('\n');
 }
 

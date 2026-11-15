@@ -1,3 +1,4 @@
+import { getFixedSchemeForTheme, normalizeThemeMode } from '../core/palette.js';
 import {
   downloadPngFromElement,
   downloadSvgFromElement,
@@ -30,6 +31,7 @@ interface CardMeta {
   const codeEl = document.getElementById('pele-source-code');
   const heightToggleBtn = document.getElementById('pele-height-toggle') as HTMLButtonElement | null;
   const fullscreenBtn = document.getElementById('pele-fullscreen-toggle') as HTMLButtonElement | null;
+  const themeSelect = document.getElementById('pele-theme-select') as HTMLSelectElement | null;
 
   if (!card || !stage || !panLayer) return;
   const headerEl = card.querySelector('.pele-header') as HTMLElement | null;
@@ -50,15 +52,22 @@ interface CardMeta {
     // Keep defaults
   }
 
-  const fixedTheme =
-    meta.theme === 'flexoki-light'
-      ? 'flexoki-light'
-      : meta.theme === 'flexoki-dark'
-        ? 'flexoki-dark'
-        : null;
-  if (meta.theme !== 'host') {
-    observeHostAndSystemTheme(card, fixedTheme);
-  }
+  let stopThemeObserver: (() => void) | null = null;
+  const applyCardTheme = (rawMode: string) => {
+    const mode = normalizeThemeMode(rawMode);
+    card.setAttribute('data-theme-mode', mode);
+    stopThemeObserver?.();
+    stopThemeObserver = null;
+    if (mode === 'host') {
+      card.removeAttribute('data-resolved-theme');
+      return;
+    }
+    stopThemeObserver = observeHostAndSystemTheme(card, getFixedSchemeForTheme(mode));
+  };
+
+  const initialTheme = normalizeThemeMode(meta.theme);
+  if (themeSelect) themeSelect.value = initialTheme;
+  applyCardTheme(initialTheme);
 
   if (toolbar) wireToolbarRovingFallback(toolbar);
   wireCopyButtons(statusEl);
@@ -257,6 +266,12 @@ interface CardMeta {
   const announce = (msg: string) => {
     if (statusEl) statusEl.textContent = msg;
   };
+
+  themeSelect?.addEventListener('change', () => {
+    applyCardTheme(themeSelect.value);
+    const label = themeSelect.selectedOptions[0]?.textContent || themeSelect.value;
+    announce(`已切换配色：${label}`);
+  });
 
   fullscreenBtn?.addEventListener('click', () => {
     if (document.fullscreenElement) {

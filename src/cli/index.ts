@@ -23,7 +23,9 @@ Usage:
   agy-pele --help | --version
 
 Themes:
-  flexoki (default, light/dark auto) | flexoki-light | flexoki-dark | host
+  flexoki (default, light/dark auto) | flexoki-light | flexoki-dark
+  gov (government clean auto) | gov-light (crisp light) | gov-dark
+  host (follow host CSS tokens)
 `);
 }
 

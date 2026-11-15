@@ -38,6 +38,17 @@ test('agy-pele render reads stdin pipe and outputs themed SVG and HTML', () => {
     assert.ok(autoHtml.includes('"heightMode":"auto"'));
     const hMatch = /\.pele-workspace\s*\{[^}]*height:\s*(\d+)px;/s.exec(autoHtml);
     assert.ok(hMatch && Number(hMatch[1]) > 420);
+
+    const govOut = path.join(tmpDir, 'gov.html');
+    execFileSync(process.execPath, [cliPath, 'render', '-', '-f', 'html', '-o', govOut, '--theme', 'gov-light', '--title', '政务办理流程'], {
+      input: 'flowchart LR\n  A[一窗受理] --> B[并联审批] --> C[电子证照]',
+      encoding: 'utf8',
+    });
+    const govHtml = fs.readFileSync(govOut, 'utf8');
+    assert.ok(govHtml.includes('data-theme-mode="gov-light"'));
+    assert.ok(govHtml.includes('id="pele-theme-select"'));
+    assert.ok(govHtml.includes('<option value="gov-light" selected>'));
+    assert.ok(govHtml.includes('#0f5ec7'));
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

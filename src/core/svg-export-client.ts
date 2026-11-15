@@ -81,8 +81,12 @@ export function serializeResolvedSvg(
       if (name === '--pele-bg') resolvedBg = val;
     }
   }
-  const prevStyle = clone.getAttribute('style') || '';
-  clone.setAttribute('style', `${resolvedPairs.join(';')};${prevStyle}`);
+  const prevStyle = (clone.getAttribute('style') || '').replace(/^;+|;+$/g, '');
+  const resolvedStyle = resolvedPairs.join(';');
+  const combinedStyle = prevStyle && resolvedStyle
+    ? `${prevStyle};${resolvedStyle}`
+    : prevStyle || resolvedStyle;
+  clone.setAttribute('style', combinedStyle);
 
   if (includeSolidBackground) {
     const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -312,14 +316,18 @@ export function wireToolbarRovingFallback(toolbar: HTMLElement): void {
  */
 export function observeHostAndSystemTheme(
   targetEl: HTMLElement,
-  fixedTheme?: 'flexoki-light' | 'flexoki-dark' | null,
+  fixedTheme?: 'light' | 'dark' | 'flexoki-light' | 'flexoki-dark' | 'gov-light' | 'gov-dark' | null,
   onChange?: (resolved: 'light' | 'dark') => void
 ): () => void {
   const mql = window.matchMedia('(prefers-color-scheme: dark)');
 
   const resolve = (): 'light' | 'dark' => {
-    if (fixedTheme === 'flexoki-light') return 'light';
-    if (fixedTheme === 'flexoki-dark') return 'dark';
+    if (fixedTheme === 'light' || fixedTheme === 'flexoki-light' || fixedTheme === 'gov-light') {
+      return 'light';
+    }
+    if (fixedTheme === 'dark' || fixedTheme === 'flexoki-dark' || fixedTheme === 'gov-dark') {
+      return 'dark';
+    }
     const root = document.documentElement;
     if (root.classList.contains('dark')) return 'dark';
     if (root.classList.contains('light')) return 'light';

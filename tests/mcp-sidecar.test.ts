@@ -130,6 +130,23 @@ test('MCP stdio server handles initialize, tools/list, and all 4 Pele tools', as
     assert.equal(svgPayload.ok, true);
     assert.ok(svgPayload.markdownImage.startsWith('![Artifact Mindmap]('));
     assert.ok(fs.existsSync(svgPayload.outputPath));
+
+    const govCardRes = await rpc(6, 'tools/call', {
+      name: 'pele_render_card',
+      arguments: {
+        title: 'Gov Service Flow',
+        theme: 'gov-light',
+        code: 'flowchart LR\n  A[群众申报] --> B[部门联办]',
+      },
+      _meta: { 'antigravity.google/conversation_id': convId },
+    });
+    const govCardPayload = JSON.parse(
+      ((govCardRes.result as { content: Array<{ text: string }> }).content[0]).text
+    ) as { ok: boolean; outputPath: string };
+    assert.equal(govCardPayload.ok, true);
+    const govCardHtml = fs.readFileSync(govCardPayload.outputPath, 'utf8');
+    assert.ok(govCardHtml.includes('data-theme-mode="gov-light"'));
+    assert.ok(govCardHtml.includes('id="pele-theme-select"'));
   } finally {
     rl.close();
     child.kill();
@@ -157,6 +174,7 @@ test('Sidecar preview server enforces token auth, root containment, and hash-che
     assert.equal(htmlRes.status, 200);
     const html = await htmlRes.text();
     assert.ok(html.includes('Pele Studio'));
+    assert.ok(html.includes('value="gov-light"'));
 
     const uiRes = await fetch(`${server.url}ui.js`);
     assert.equal(uiRes.status, 200);

@@ -45,8 +45,9 @@ export const TOOLS: ToolDef[] = [
         },
         theme: {
           type: 'string',
-          enum: ['flexoki', 'flexoki-light', 'flexoki-dark', 'host'],
-          description: 'Color palette preset (default: flexoki).',
+          enum: ['flexoki', 'flexoki-light', 'flexoki-dark', 'gov', 'gov-light', 'gov-dark', 'host'],
+          description:
+            'Color palette preset (default: flexoki). Also supports Government Clean crisp palettes ("gov-light", "gov", "gov-dark"), plus an interactive theme selector right in the card toolbar.',
         },
         height: {
           type: 'string',
@@ -64,7 +65,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: 'pele_render_artifact_svg',
     description:
-      'Render a Mermaid or Pele extended diagram into a standalone Flexoki Light/Dark adaptive .svg file for embedding inside session .md artifacts.',
+      'Render a Mermaid or Pele extended diagram into a standalone Light/Dark adaptive .svg file (Flexoki or Government Clean) for embedding inside session .md artifacts.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -83,8 +84,9 @@ export const TOOLS: ToolDef[] = [
         },
         theme: {
           type: 'string',
-          enum: ['flexoki', 'flexoki-light', 'flexoki-dark', 'host'],
-          description: 'Color palette preset (default: flexoki).',
+          enum: ['flexoki', 'flexoki-light', 'flexoki-dark', 'gov', 'gov-light', 'gov-dark', 'host'],
+          description:
+            'Color palette preset (default: flexoki). Also supports Government Clean palettes ("gov", "gov-light", "gov-dark").',
         },
       },
       required: ['code'],

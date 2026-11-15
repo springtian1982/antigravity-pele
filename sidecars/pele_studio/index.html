@@ -25,11 +25,18 @@
         </div>
         <span role="separator" aria-orientation="vertical"></span>
         <div role="group" aria-label="Theme">
-          <select id="theme-select" class="select" aria-label="Theme preset">
-            <option value="flexoki">Flexoki Auto</option>
-            <option value="flexoki-light">Flexoki Light</option>
-            <option value="flexoki-dark">Flexoki Dark</option>
-            <option value="host">Host Theme</option>
+          <select id="theme-select" class="select" aria-label="配色风格" title="切换配色风格">
+            <optgroup label="默认暖墨 (Flexoki)">
+              <option value="flexoki">默认暖墨 (自动)</option>
+              <option value="flexoki-light">默认暖墨 (浅色)</option>
+              <option value="flexoki-dark">默认暖墨 (深色)</option>
+            </optgroup>
+            <optgroup label="政务清爽 (Gov)">
+              <option value="gov-light">政务清爽 (浅色)</option>
+              <option value="gov">政务清爽 (自动)</option>
+              <option value="gov-dark">政务清爽 (深色)</option>
+            </optgroup>
+            <option value="host">跟随宿主 (Host)</option>
           </select>
         </div>
         <span role="separator" aria-orientation="vertical"></span>

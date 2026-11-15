@@ -9,7 +9,7 @@ Use `antigravity-pele` whenever creating, verifying, extracting, or previewing M
 
 ## 1. Choosing the Right Modality
 
-1. **Chat replies**: Call MCP tool `pele_render_card` with `{ code, title, theme?, height?, maxHeight? }` (`height` defaults to `"auto"` so portrait/vertical diagrams expand cleanly to their full-width natural height; pass `"compact"` for `<= 416px` or a pixel string like `"680"` if needed) and embed the returned `<agent-embed src="file:///..."></agent-embed>` tag directly in the response. Cards also provide 1-click **`自适应`** and **`全屏`** buttons in the sticky header toolbar. When `isTallDiagram` is `true` (because chat `<agent-embed>` caps its outer viewport at ~500px), include a one-line shortcut below the embed with the returned `fullHeightLink` and `studioPill` so the user can open the unclipped full-height view in the right pane.
+1. **Chat replies**: Call MCP tool `pele_render_card` with `{ code, title, theme?, height?, maxHeight? }` (`theme` defaults to `"flexoki"`, or pass `"gov-light"` / `"gov"` / `"gov-dark"` for crisp Government Clean styling; every card toolbar also includes a live theme switcher dropdown. `height` defaults to `"auto"` so portrait/vertical diagrams expand cleanly to their full-width natural height; pass `"compact"` for `<= 416px` or a pixel string like `"680"` if needed) and embed the returned `<agent-embed src="file:///..."></agent-embed>` tag directly in the response. Cards also provide 1-click **`自适应`** and **`全屏`** buttons in the sticky header toolbar. When `isTallDiagram` is `true` (because chat `<agent-embed>` caps its outer viewport at ~500px), include a one-line shortcut below the embed with the returned `fullHeightLink` and `studioPill` so the user can open the unclipped full-height view in the right pane.
 2. **Session `.md` artifacts**: Call MCP tool `pele_render_artifact_svg` and insert the returned `![title](/abs/path/diagram.svg)` image reference.
 3. **Repository `.md` docs**: Write standard Mermaid 12.1 ` ```mermaid ` fenced blocks and validate via `pele_check_markdown` (`strictMermaid: true`) or `agy-pele check --strict-mermaid`.
 4. **Live interactive studio / PNG export**: Call `pele_open_in_studio` and include `[Pele Studio](sidecar://antigravity-pele/pele_studio/)`.
@@ -73,6 +73,7 @@ ishikawa
 - **Render single file or stdin**:
   - `agy-pele render diagram.mmd -o diagram.svg`
   - `cat diagram.mmd | agy-pele render -f html -o card.html --theme flexoki [--height auto|compact|<px>] [--max-height <px>]`
+  - Themes: `flexoki` (default auto), `flexoki-light`, `flexoki-dark`, `gov` (government auto), `gov-light`, `gov-dark`, `host`
 - **Validate Markdown / Mermaid files**:
   - `agy-pele check README.md docs/ [--strict-mermaid] [--json]`
 - **Batch extract all diagrams from a Markdown file**:

@@ -1,4 +1,5 @@
 import { detectType, mount, PeleError, type Mounted } from 'pele';
+import { getFixedSchemeForTheme, normalizeThemeMode } from '../core/palette.js';
 import {
   downloadPngFromElement,
   downloadSvgFromElement,
@@ -262,24 +263,31 @@ const TEMPLATES: Record<string, string> = {
     }
   };
 
-  const applyThemeMode = (mode: string) => {
+  const STUDIO_THEME_STORAGE_KEY = 'pele-studio-theme';
+
+  const applyThemeMode = (rawMode: string) => {
+    const mode = normalizeThemeMode(rawMode);
     appEl.setAttribute('data-theme-mode', mode);
+    if (themeSelect && themeSelect.value !== mode) {
+      themeSelect.value = mode;
+    }
     stopThemeObserver?.();
     stopThemeObserver = null;
     if (mode === 'host') {
       appEl.removeAttribute('data-resolved-theme');
       return;
     }
-    const fixed =
-      mode === 'flexoki-light'
-        ? 'flexoki-light'
-        : mode === 'flexoki-dark'
-          ? 'flexoki-dark'
-          : null;
-    stopThemeObserver = observeHostAndSystemTheme(appEl, fixed);
+    stopThemeObserver = observeHostAndSystemTheme(appEl, getFixedSchemeForTheme(mode));
   };
 
-  applyThemeMode('flexoki');
+  let initialTheme = 'flexoki';
+  try {
+    const savedTheme = localStorage.getItem(STUDIO_THEME_STORAGE_KEY);
+    if (savedTheme) initialTheme = normalizeThemeMode(savedTheme);
+  } catch {
+    // Ignore storage access restrictions
+  }
+  applyThemeMode(initialTheme);
 
   if (toolbar) wireToolbarRovingFallback(toolbar);
   wireCopyButtons(statusEl);
@@ -311,7 +319,15 @@ const TEMPLATES: Record<string, string> = {
   });
 
   themeSelect?.addEventListener('change', () => {
-    applyThemeMode(themeSelect.value);
+    const mode = normalizeThemeMode(themeSelect.value);
+    applyThemeMode(mode);
+    try {
+      localStorage.setItem(STUDIO_THEME_STORAGE_KEY, mode);
+    } catch {
+      // Ignore storage access restrictions
+    }
+    const label = themeSelect.selectedOptions[0]?.textContent || mode;
+    announce(`已切换配色：${label}`);
   });
 
   const viewButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('button[data-view]'));

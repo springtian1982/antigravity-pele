@@ -42,7 +42,7 @@ agy-pele render [input.mmd | -] [-o <out.svg|out.html>] [-f svg|html] [--theme <
 | `[input.mmd \| -]` | 输入文件路径，或使用 `-` / 管道从 `stdin` 读取 | （若 stdin 非 TTY 则自动读取 stdin） |
 | `-o, --output <path>` | 输出文件路径；未指定时直接打印到 `stdout` | 打印到标准输出 |
 | `-f, --format <svg\|html>` | 显式指定输出格式；未指定时根据 `-o` 扩展名判断 | `svg` |
-| `--theme <mode>` | `flexoki`（亮暗自适应）、`flexoki-light`、`flexoki-dark`、`host` | `flexoki` |
+| `--theme <mode>` | `flexoki`（默认暖墨亮暗自适应）、`flexoki-light`、`flexoki-dark`、`gov-light`（政务清爽浅色）、`gov`（政务清爽自动）、`gov-dark`、`host` | `flexoki` |
 | `--title <str>` | HTML 卡片顶栏标题（仅 `-f html` 有效） | 输入文件名或 `Mermaid Diagram` |
 | `--height <mode>` | HTML 卡片工作区高度：`auto`、`compact`（`<= 416px`）或数字像素如 `680` | `auto` |
 | `--max-height <px>` | `auto` 模式下的最大高度上限（范围 `200–4000`） | HTML 独立页默认 `2400` |
@@ -55,6 +55,9 @@ agy-pele render arch.mmd -o arch.svg
 
 # Linux: 通过管道生成固定深色 Flexoki 交互式 HTML（竖版自适应高度）
 cat flow.mmd | agy-pele render - -f html -o flow.html --theme flexoki-dark --title "部署流程" --height auto
+
+# Linux: 生成政务清爽风格交互式 HTML 卡片（默认纯白 + 政务蓝高对比）
+cat flow.mmd | agy-pele render - -f html -o gov-flow.html --theme gov-light --title "政务审批协同流程"
 ```
 
 ```powershell

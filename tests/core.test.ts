@@ -9,7 +9,7 @@ import {
   HashConflictError,
   replaceMermaidBlockInFile,
 } from '../src/core/markdown.js';
-import { FLEXOKI_DARK, FLEXOKI_LIGHT } from '../src/core/palette.js';
+import { FLEXOKI_DARK, FLEXOKI_LIGHT, GOV_DARK, GOV_LIGHT } from '../src/core/palette.js';
 import { windowsOrPosixPathToFileUri } from '../src/core/platform.js';
 import { renderDiagram, validateDiagram } from '../src/core/renderer.js';
 
@@ -36,6 +36,22 @@ test('renders standard Mermaid and Pele-exclusive extended diagrams with Flexoki
   );
   assert.equal(venn.type, 'venn');
   assert.equal(venn.isPeleExclusive, true);
+
+  const govAuto = renderDiagram('flowchart LR\n  A[受理] --> B[办结]', {
+    theme: 'gov',
+    standaloneSvg: true,
+  });
+  assert.ok(govAuto.themedSvg.includes(GOV_LIGHT['--pele-bg']));
+  assert.ok(govAuto.themedSvg.includes(GOV_LIGHT['--pele-accent']));
+  assert.ok(govAuto.themedSvg.includes(GOV_DARK['--pele-bg']));
+
+  const govLight = renderDiagram('flowchart LR\n  A[受理] --> B[办结]', {
+    theme: 'gov-light',
+    standaloneSvg: true,
+  });
+  assert.ok(govLight.themedSvg.includes(GOV_LIGHT['--pele-bg']));
+  assert.ok(govLight.themedSvg.includes(GOV_LIGHT['--pele-accent']));
+  assert.ok(!govLight.themedSvg.includes(GOV_DARK['--pele-bg']));
 });
 
 test('extracts CRLF & LF Markdown blocks with exact file line offsets and atomic hash-checked writeback', () => {
@@ -179,6 +195,21 @@ test('builds accessible sticky-header card HTML with adaptive height by default,
   const fixedHeightMatch = /\.pele-workspace\s*\{[^}]*height:\s*(\d+)px;/s.exec(fixedHtml);
   assert.ok(fixedHeightMatch);
   assert.equal(Number(fixedHeightMatch[1]), 640);
+
+  const govHtml = buildCardHtml({
+    rendered,
+    code: tallCode,
+    title: 'Gov Flow',
+    theme: 'gov-light',
+  });
+  assert.ok(govHtml.includes('data-theme-mode="gov-light"'));
+  assert.ok(govHtml.includes('id="pele-theme-select"'));
+  assert.ok(govHtml.includes('<option value="gov-light" selected>'));
+  assert.ok(govHtml.includes(FLEXOKI_LIGHT['--pele-bg']));
+  assert.ok(govHtml.includes(GOV_LIGHT['--pele-accent']));
+  assert.ok(govHtml.includes(GOV_DARK['--pele-bg']));
+  assert.ok(!/100vh/.test(govHtml));
+  assert.ok(!/font-size:\s*(?:[0-9]|10|11)px/.test(govHtml));
 });
 
 test('prebuilt distribution bundles preserve SPDX MIT and upstream copyright headers', () => {
